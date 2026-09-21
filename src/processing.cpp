@@ -35,95 +35,7 @@
 #include <stdexcept>
 #include <unistd.h>
 
-// for debug terminal logging - needs to be set when building
-#ifndef AEMOT_VERBOSE_LOGGING
-#define AEMOT_VERBOSE_LOGGING 0
-#endif
-
-#if AEMOT_VERBOSE_LOGGING
-#define AEMOT_LOG_INFO(x) do { std::cout << x; } while (0)
-#define AEMOT_LOG_ERR(x)  do { std::cerr << x; } while (0)
-#else
-#define AEMOT_LOG_INFO(x) do {} while (0)
-#define AEMOT_LOG_ERR(x)  do {} while (0)
-#endif
-
 namespace processing {
-
-    namespace { // global variables for this namespace
-
-        // ---- run configuration / state ----
-        Parameters params;
-        std::unique_ptr<TrackManager> track_manager;
-        std::unique_ptr<SAEdetector> detector;
-        std::unique_ptr<TrackLogger> track_logger;
-        std::unique_ptr<TrackSummaryLogger> track_summary_logger;
-        std::unique_ptr<DetectionCorroborationGrid> corroboration_grid;
-        std::unique_ptr<RawEventLogger> raw_event_logger;
-
-        frame_queue* frame_output = nullptr;
-
-        // ---- display / video output ----
-        int image_count = 0;
-        double t_next_publish = 0.0;
-
-        // ---- reconstructed-image accumulators ----
-        cv::Mat log_intensity_state, ts_array;
-        double contrast_threshold = 0.0;
-        // Buffer of events sharing a timestamp (cleared on track deletion).
-        std::queue<std::pair<int, std::pair<int, int>>> same_ts_e_buffer;
-
-        // ---- per-event bookkeeping ----
-        uint64_t total_events = 0;
-        bool have_first_ts = false;
-        double t1 = 0.0;               // first event's raw sensor timestamp (µs), used as the zero point
-        double t_last = -1.0;          // sentinel: -1.0 means "not yet set"
-        double ts_kf_last = 0.0;
-        double distance = 0.0;
-        int id = 0;
-        double detection_event_count = 0.0;
-        int double_track_evaluation_counter = 0;
-        int full_evaluation_counter = 0;
-        Eigen::Vector3d e;              // event measurement, packed as (x, y, ts) each iteration
-
-        std::vector<int> deleted_IDs_scratch;
-
-        // distance thresholds cached in squared form once per batch-run so the per-event search never needs sqrt()/pow()
-        double dist_threshold_sq = 0.0;
-        double detector_dist_threshold_sq = 0.0;
-
-        // ---- Kalman filter matrix templates ----
-        // built once in setup() then handed to TrackManager (which makes its own per-track copies)
-        Eigen::MatrixXd F, C, R, P, Q, A, x0;
-
-        //detector type to use
-        bool use_dt_detector = false;
-
-        //whether or not to show the display
-        bool show_display = true;
-
-        // sticky/mru association cache for the most recently assigned tracks, for optimisation of nearest-neighbour association
-        constexpr int MRU_SIZE = 3;
-        int mru_slots[MRU_SIZE];
-        int mru_len = 0;
-        uint64_t mru_hit_count = 0;
-        uint64_t mru_miss_count = 0;
-
-        // moves 'slot' to the front of the MRU list, evicting the oldest entry
-        inline void mru_touch(int slot) {
-            int existing = -1;
-            for (int k = 0; k < mru_len; k++) {
-                if (mru_slots[k] == slot) { existing = k; break; }
-            }
-            int shift_from = (existing >= 0) ? existing : std::min(mru_len, MRU_SIZE - 1);
-            for (int k = shift_from; k > 0; k--) {
-                mru_slots[k] = mru_slots[k - 1];
-            }
-            mru_slots[0] = slot;
-            if (existing < 0 && mru_len < MRU_SIZE) mru_len++;
-        }
-
-    } // end namespace for global variables
 
     namespace {
         // Resolves the directory containing the currently-running executable, by
@@ -148,9 +60,23 @@ namespace processing {
         }
     }
 
+    // moves 'slot' to the front of the MRU list, evicting the oldest entry
+    void ProcessingPipeline::mru_touch(int slot) {
+        int existing = -1;
+        for (int k = 0; k < mru_len; k++) {
+            if (mru_slots[k] == slot) { existing = k; break; }
+        }
+        int shift_from = (existing >= 0) ? existing : std::min(mru_len, MRU_SIZE - 1);
+        for (int k = shift_from; k > 0; k--) {
+            mru_slots[k] = mru_slots[k - 1];
+        }
+        mru_slots[0] = slot;
+        if (existing < 0 && mru_len < MRU_SIZE) mru_len++;
+    }
+
     // ---- HIGH PASS FILTERS ---- //
     // (per-pixel updates) A classic Surface of Active Events (SAE) visual reconstruction.
-    void high_pass(double ts, int x, int y, int p, int alpha)
+    void ProcessingPipeline::high_pass(double ts, int x, int y, int p, int alpha)
     {
         double* li_row = log_intensity_state.ptr<double>(y);
         double* ts_row = ts_array.ptr<double>(y);
@@ -161,7 +87,7 @@ namespace processing {
     }
 
     // (whole-image updates) Applies an update to the entire SAE at once.
-    void high_pass_global(double ts, int &alpha)
+    void ProcessingPipeline::high_pass_global(double ts, int &alpha)
     {
         cv::Mat beta;
         cv::exp(-alpha * (ts - ts_array), beta); // decay factor per-pixel
@@ -175,7 +101,7 @@ namespace processing {
     // PROCESSING thread - this function must stay cheap and must never
     // touch OpenCV's GUI/window/video-writer APIs; all of that lives in
     // render_frame() on the render thread instead.
-    void publish_frame(double ts) {
+    void ProcessingPipeline::publish_frame(double ts) {
         high_pass_global(ts, params.alpha);
         if (frame_output == nullptr) {
             return; // shouldn't happen if setup() succeeded, but don't crash if it does
@@ -201,7 +127,7 @@ namespace processing {
     // image. Draws an ellipse for each snapshotted track. Optionally
     // writes the frame to a video file/png. Never reads shared tracking
     // state - everything it needs is in `job`.
-    bool render_frame(const frame_job& job) {
+    bool ProcessingPipeline::render_frame(const frame_job& job) {
         cv::Mat image;
         cv::exp(job.log_intensity_snapshot, image); // undo the log: back to linear "intensity"
         double minVal = 1.4;
@@ -277,12 +203,12 @@ namespace processing {
             }
         }
  
-        cv::imshow("Video", cimg); // show the reconstructed+annotated frame
+        cv::imshow("Video" + std::to_string(camera_id), cimg); // show the reconstructed+annotated frame
         int key = cv::waitKey(1);
 
         // allow close on ESC key
         if (key == 27) {
-            std::cout << "ESC key pressed. Exiting..." << std::endl;
+            std::cout << "[cam " << int(camera_id) << "] ESC key pressed. Exiting..." << std::endl;
             return true; // signal to the caller that we want to exit
         }
  
@@ -293,8 +219,9 @@ namespace processing {
 
     // ---- SETUP() ---- //
     // Runs once, before the first packet arrives.
-    bool setup(const std::string &config_name, frame_queue& frames) {
+    bool ProcessingPipeline::setup(const std::string &config_name, frame_queue& frames, TrackUpdateQueue& threadC) {
         frame_output = &frames;
+        threadC_output = &threadC;
 
         // PARSE THE CONFIG //
         try {
@@ -342,7 +269,7 @@ namespace processing {
                 localtime_r(&now_time_t, &local_tm); // Thread-safe POSIX alternative
             #endif
             std::stringstream ss;
-            ss << std::put_time(&local_tm, "%d-%m-%Y-%H-%M-%S");
+            ss << std::put_time(&local_tm, "%d-%m-%Y-%H-%M-%S") << "_cam" << int(camera_id);
             std::string formatted = ss.str();
         
             try {
@@ -454,13 +381,13 @@ namespace processing {
     // Runs once, before the first frame, on the RENDER thread. Must not be
     // called until setup() (above) has already returned true - reads
     // params, which setup() is what populates.
-    void render_setup() {
+    void ProcessingPipeline::render_setup() {
         if (!show_display) {
-            std::cout << "Display disabled by config. Skipping window creation..." << std::endl;
+            std::cout << "[cam " << int(camera_id) << "] Display disabled by config. Skipping window creation..." << std::endl;
             return;
         }
-        cv::namedWindow("Video");
-        cv::resizeWindow("Video", params.width, params.height);
+        cv::namedWindow("Video" + std::to_string(camera_id));
+        cv::resizeWindow("Video" + std::to_string(camera_id), params.width, params.height);
  
         // RENDER INITIAL EMPTY FRAME //
         frame_job empty_job;
@@ -470,21 +397,31 @@ namespace processing {
     }
  
     // Runs once, on the render thread, after the frame_queue is stopped and drained.
-    void render_teardown() {
+    void ProcessingPipeline::render_teardown() {
         if (show_display) {
-            cv::destroyWindow("Video");
+            cv::destroyWindow("Video" + std::to_string(camera_id));
         }
     }
 
 
     // ---- EVENT PROCESSOR LOGIC ---- //
     // Runs once for every paclet pulled from the queue.
-    void process_batch(const std::vector<sepia::dvs_event>& events) {
+    void ProcessingPipeline::process_batch(const std::vector<sepia::dvs_event>& events) {
+        if (events.empty()) return;
+
+        // TRIGGER PULSE HANDLER //
+        const uint32_t new_pulses = pending_trigger_pulse_count.exchange(0, std::memory_order_acquire);
+        if (new_pulses > 0) {
+            trigger_pulse_count += new_pulses; // update the global synced seconds counter
+            const int64_t raw_t = pending_internal_timestamp_of_last_trigger_pulse.load(std::memory_order_acquire);
+            if (have_first_ts) {
+                internal_timestamp_of_last_trigger_pulse = (static_cast<double>(raw_t) - t1) * 1e-6; // update the internal reference for the last global synced second marker
+            }
+        }
+        // BACK TO STANDARD PROCESSING
+        
         // `events` is one batch (one USB packet's worth), events are in timestamp order within the batch and across batches.
         total_events += events.size();
-        
-        // debug (remove later):
-        //std::cout << "received packet of " << events.size() << " events\n";
         
         // iterate over every event in the packet:
         for (const auto& event : events) {
@@ -493,13 +430,16 @@ namespace processing {
             // event.y  -> height pixel coord
             // event.on -> true = ON, false = OFF
 
-            //debug
-            //std::cout << "------------------------------------------\n";
-
             if (!have_first_ts) // assign t1 on first event
             {
                 t1 = static_cast<double>(event.t);
                 have_first_ts = true;
+
+                //  retroactively fix the reference point is a pulse landed before the first event somehow
+                if (new_pulses > 0) {
+                    const int64_t raw_t = pending_internal_timestamp_of_last_trigger_pulse.load(std::memory_order_relaxed);
+                    internal_timestamp_of_last_trigger_pulse = (static_cast<double>(raw_t) - t1) * 1e-6; // keep this relative to the first event, too, to keep it consistent with the main processing loop's time handling
+                }
             }
             // convert microseconds to seconds, relative to the first event
             double ts = (static_cast<double>(event.t) - t1) * 1e-6;
@@ -603,6 +543,23 @@ namespace processing {
 
                     // log the post-update state, buffered until validated
                     track_manager->logTrackUpdate(id, ts, trk->state_data());
+
+                    // EMIT ONTO SHARED CROSS-CAMERA THREAD C OUTPUT QUEUE //
+                    if (threadC_output != nullptr && trk->validated) {
+                        // SYNC INTERNAL TIMESTAMP TO GLOBAL TIME BEFORE SENDING IT OUT INTO THE OUTSIDE WORLD //
+                        double tg = static_cast<double>(trigger_pulse_count) + (ts - internal_timestamp_of_last_trigger_pulse);
+                                                        // seconds          // fraction of current second
+                        const double* state = trk->state_data();
+                        TrackUpdateMsg msg;
+                        msg.camera_id = camera_id;
+                        msg.track_id = static_cast<uint64_t>(trk->getID());
+                        msg.tg = tg; // NEEDS CHANGING FOR GLOBAL TIME SYNC
+                        msg.x = state[0];
+                        msg.y = state[1];
+                        msg.vx = state[2];
+                        msg.vy = state[3];
+                        threadC_output->push(msg);
+                    }
                 }
             }
             
@@ -673,9 +630,6 @@ namespace processing {
                                 AEMOT_TIMED_SCOPE("detection_createnewtrack");
                                 NewTrackResult new_trk = track_manager->createNewTrack({(double)c, (double)r, ts});
                                 mru_touch(new_trk.slot);
-                                
-                                AEMOT_LOG_INFO("[track] NEW track at (" << c << "," << r << ") ts=" << ts
-                                    << " active=" << track_manager->activeCount() << "\n");
                             }
 
                         }
@@ -745,7 +699,7 @@ namespace processing {
         }
     }
 
-    void teardown() {
+    void ProcessingPipeline::teardown() {
         // write out any summaries for tracks that are still alive at teardown
         if (track_manager) {
             track_manager->flushAllSummaries();
@@ -765,11 +719,11 @@ namespace processing {
         Profiler::instance().report();
 
         if (mru_hit_count + mru_miss_count > 0) {
-            std::cout << "MRU hit rate: " << mru_hit_count << "/" << (mru_hit_count + mru_miss_count)
+            std::cout << "[cam " << int(camera_id) << "] MRU hit rate: " << mru_hit_count << "/" << (mru_hit_count + mru_miss_count)
                     << " (" << (100.0 * mru_hit_count / (mru_hit_count + mru_miss_count)) << "%)\n";
         }
 
-        std::cout << "processed " << total_events << " events total\n";
+        std::cout << "[cam " << int(camera_id) << "] processed " << total_events << " events total\n";
     }
 
 } // namespace processing
