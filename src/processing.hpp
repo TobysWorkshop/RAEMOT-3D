@@ -74,7 +74,7 @@ namespace processing {
         //
         void on_trigger_event(int64_t raw_t_us) {
             pending_trigger_pulse_count.fetch_add(1, std::memory_order_relaxed);
-            pending_internal_timestamp_of_last_trigger_pulse.store(raw_t_us, std::memory_order_relaxed);
+            pending_internal_timestamp_of_last_trigger_pulse.store(raw_t_us, std::memory_order_release);
         }
 
     private:
