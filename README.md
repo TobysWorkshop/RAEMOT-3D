@@ -1,8 +1,10 @@
 <a name="top"></a>
 
-# Real-time 'Asynchronous Multi-Object Tracking with an Event Camera' (AEMOT) with Neuromorphic Drivers
+# Real-time Asynchronous Multi-Object Tracking in 3D with an Event Camera (RAEMOT 3D) with Neuromorphic Drivers
 
-> Now in real-time!
+> Now in real-time AND 3D!
+
+### ***NOTE: THIS README IS FROM THE OLD NON-3D REPO AND HAS NOT BEEN UPDATED YET. THIS IS ALL A WORK IN PROGRESS!***
 
 ![system diagram dark mode](system_dark.png)  
 *If you're using light mode, the above system diagram might be hard to see. If so, check out [this light-mode-friendly version](system_light.png) instead :)*
