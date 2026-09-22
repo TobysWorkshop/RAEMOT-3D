@@ -95,7 +95,9 @@ struct CameraContext {
             }
         };
 
-        auto handle_trigger_event = [](sepia::evk4::trigger_event) {};
+        auto handle_trigger_event = [this](sepia::evk4::trigger_event event) {
+            pipeline.on_trigger_event(static_cast<int64_t>(event.t), event.rising);
+        };
 
         auto handle_event = [current_batch](sepia::dvs_event event) {
             current_batch->push_back(event);
@@ -143,21 +145,23 @@ void run_threadC(TrackUpdateQueue& threadC_queue) {
     while (threadC_queue.pop(msg)) {
         threadC::process_track_update(msg);
     }
+    threadC::teardown();
 }
 
 
 // ENTRY POINT //
 int main(int argc, char* argv[]) {
-    if (argc < 3) {
-        std::cerr << "usage: " << argv[0] << " <config_name_a> <config_name_b> [serial_a] [serial_b]\n";
+    if (argc < 4) {
+        std::cerr << "usage: " << argv[0] << " <config_name_a> <config_name_b> <config_name_c> [serial_a] [serial_b]\n";
         std::cerr << "  (config names are looked up as configs/<config_name>.yaml by processing::setup)\n";
         std::cerr << "  (if serials are omitted, the first two EVK4 devices found are used, in enumeration order)\n";
         return 1;
     }
     const std::string config_name_a = argv[1];
     const std::string config_name_b = argv[2];
-    const std::string serial_a = (argc > 3) ? argv[3] : "";
-    const std::string serial_b = (argc > 4) ? argv[4] : "";
+    const std::string config_name_c = argv[3];
+    const std::string serial_a = (argc > 4) ? argv[4] : "";
+    const std::string serial_b = (argc > 5) ? argv[5] : "";
 
     std::signal(SIGINT, handle_sigint);
 
@@ -205,8 +209,13 @@ int main(int argc, char* argv[]) {
 
     std::cout << "[Camera A]: opening EVK4 " << dev_a->serial << ", with config: configs/" << config_name_a << ".yaml...\n";
     std::cout << "[Camera B]: opening EVK4 " << dev_b->serial << ", with config: configs/" << config_name_b << ".yaml...\n";
- 
+    
     // Thread C
+    if (!threadC::setup(config_name_c)) {
+        std::cerr << "[Thread C] setup failed, aborting\n"
+        return 1;
+    }
+    
     TrackUpdateQueue threadC_queue(4096);
     std::thread threadC_thread(run_threadC, std::ref(threadC_queue));
 
