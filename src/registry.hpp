@@ -43,58 +43,41 @@ public:
         return idx;
     }
 
-    // Promotes a WAITING A-track and a WAITING B-track into one shared CANDIDATE slot.
-    // Frees the now-redundant B slot back to the pool and repoints the B key at the A key slot,
-    // so that both keys resolve to one track.
-    void merge_into_candidate(uint16_t a_idx, uint16_t b_idx) {
+    // Attach a matched B state onto an existing WAITING A-track and promote them to a CANDIDATE slot.
+    void merge_into_candidate(uint16_t a_idx, int32_t b_track_id, const RawState& b_state) {
         Track& a = pool.get(a_idx);
-        Track& b = pool.get(b_idx);
 
-        a.key_b = b.key_b;
+        a.key_b = make_key(CamId::B, b_track_id);
         a.has_b = true;
-        a.last_b = b.last_b;
-        a.last_b_time = b.last_b_time;
+        a.last_b = b_state;
+        a.last_b_time = b_state.tg;
         a.status = TrackStatus::CANDIDATE;
         a.pass_count = 0;
         a.fail_count = 0;
 
-        map[a.key_b] = a_idx; // b's key now points at the merged slot
-        pool.release(b_idx); // b's original slot is freed immediately - they've now paired up
+        map[a.key_b] = a_idx; // Now findable by its B key too, since they've paired up
     }
 
-    // Split a CANDIDATE pair that failed early - recreate two independant
-    // WAITING tracks (each carrying its last know state), set cooldown on both
-    // against each other, and free the original merged slot.
-    // Returns the two new slot indicies as {a_idx, b_idx}
-    std::pair<uint16_t, uint16_t> dissolve(uint16_t merged_idx, double now, double cooldown_seconds) {
-        Track& track = pool.get(merged_idx);
-        uint64_t a_key = track.key_a, b_key = track.key_b;
-        RawState last_a = track.last_a, last_b = track.last_b;
-        double la_t = track.last_a_time, lb_t = track.last_b_time;
+    // Candidate wasn't successful. Drop the B side and keep the A slot alive again as WAITING
+    void dissolve(uint16_t idx, double now, double cooldown_seconds) {
+        Track& track = pool.get(idx);
 
-        pool.release(merged_idx);
+        map.erase(track.key_b); // B key no longer resolvable
 
-        uint16_t a_idx = pool.acquire();
-        uint16_t b_idx = pool.acquire();
+        track.cooldown_key = track.key_b; // remember who to avoid rematching
+        track.has_cooldown = true;
+        track.cooldown_until = now + cooldown_seconds;
 
-        if (a_idx != INVALID_SLOT) {
-            Track& ta = pool.get(a_idx);
-            ta.key_a = a_key; ta.has_a = true;
-            ta.last_a = last_a; ta.last_a_time = la_t;
-            ta.cooldown_key = b_key; ta.has_cooldown = true;
-            ta.cooldown_until = now + cooldown_seconds;
-            map[a_key] = a_idx;
-        }
-        if (b_idx != INVALID_SLOT) {
-            Track& tb = pool.get(b_idx);
-            tb.key_a = b_key; tb.has_a = true; // stored in key_a slot of its own waiting record
-            tb.last_a = last_b; tb.last_a_time = lb_t;
-            tb.cooldown_key = a_key; tb.has_cooldown = true;
-            tb.cooldown_until = now + cooldown_seconds;
-            map[b_key] = b_idx;
-        }
+        track.has_b = false;
+        track.key_b = 0;
+        track.last_b = RawState{};
+        track.last_b_time = 0.0;
+       
+        track.status = TrackStatus::WAITING;
+        track.pass_count = 0;
+        track.fail_count = 0;
+        track.buffer_count = 0; // discard buffered 3D states (unwritten)
 
-        return {a_idx, b_idx}; 
     }
 
     // Fully close a track: erase both registered keys and free the slot

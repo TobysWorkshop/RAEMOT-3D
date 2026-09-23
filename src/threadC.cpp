@@ -36,6 +36,11 @@ namespace threadC {
         size_t POOL_SIZE = 128;
         Registry<POOL_SIZE> reg;
 
+        // --- Evaluation counters - //
+        int waiting_eval_counter = 0;
+        const int WAITING_EVAL_FREQ = 20; // number of updates between each evaluation of the WAITING tracks
+        const double WAITING_MAX_AGE = 1; // WAITING A tracks over this age (in seconds) will be removed
+
 
     } // end namespace for global variables
 
@@ -100,29 +105,26 @@ namespace threadC {
 
         // ---- BRANCH 1: NEW COMBO WE'VE NEVER SEEN ---- //
         if (idx == INVALID_SLOT) {
-            // create a new WAITING slot for it
-            idx = reg.create_waiting(state.cam_id, state.track_id);
-            
-            // if the registry is actually full, alert this problem to the user - will need to be fixed!
-            if (idx == INVALID_SLOT) {
-                std::cerr << "[Thread C] OVERFLOW! Registry pool is exhausted! -- raise POOL_SIZE!!\n";
-                return;
-            }
-
-            // access the new track slot that the registry assigned for us
-            Track& track = reg.get(idx);
 
             // -- If this update was from Camera A: -- //
             if (state.cam_id == CamId::A) {
-                // update the track's last A state info
+                // create a new WAITING slot for it
+                idx = reg.create_waiting(state.cam_id, state.track_id);
+                
+                // if the registry is actually full, alert this problem to the user - will need to be fixed!
+                if (idx == INVALID_SLOT) {
+                    std::cerr << "[Thread C] OVERFLOW! Registry pool is exhausted! -- raise POOL_SIZE!!\n";
+                    return;
+                }
+
+                // access the new track slot that the registry assigned for us
+                Track& track = reg.get(idx);
+
+                // update the track's initial A state info
                 track.last_a = state;
                 track.last_a_time = state.tg;
             } else {
             // -- If this update was from Camera B: -- //
-                
-                // update the track's last B state info
-                track.last_b = state;
-                track.last_b_time = state.tg;
 
                 // New B: scan all unassigned WAITING A-only tracks for a match
                 
@@ -136,6 +138,11 @@ namespace threadC {
                     if (suitor.status != TrackStatus::WAITING) return;
                     // make sure the suitor is an A, not a B, and also double check it didn't somehow sneak in a partner since that previous check (monogamous bee tracks, thank you very much)
                     if (!suitor.has_a || suitor.has_b) return;
+                    // make sure the suitor isn't too old for it (appropriate age gaps are all the rage. They're also very wise)
+                    if ((state.tg - suitor.last_a_time) > WAITING_MAX_AGE){
+                        reg.close(suitor_idx); // remove this suitor from the lineup entirely
+                        return;
+                    }
                     // make sure it didn't just date this suitor, and therefore is in a cooldown period (no rebounds back to exes thank you very much!)
                     if (suitor.has_cooldown && suitor.cooldown_key == track.key_b) return;
                     // Let's do a compatibility test!
@@ -149,12 +156,9 @@ namespace threadC {
                 // See if anyone in the lineup was actually suitable
                 if (best != INVALID_SLOT) {
                     // Pair them up!
-                    reg.merge_into_candidate(best, idx);
-                } else {
-                    // currently, this B track just stays single as is in its own track.
-                    // will probs need to add a way to then remove it? Or not add it at all?
-                    // because here it will just sit and never be considered again in the algorithm
+                    reg.merge_into_candidate(best, state.track_id, state);
                 }
+                // If it wasn't matched, the data is dropped and we move on to the next one coming in
             }
 
             return;
@@ -188,6 +192,7 @@ namespace threadC {
         // ... etc...
 
         // END BRANCH 2 (existing combo we've seen before)
+
     }
 
     void teardown() {
