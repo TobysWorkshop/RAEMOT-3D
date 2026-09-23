@@ -36,11 +36,21 @@ namespace threadC {
         size_t POOL_SIZE = 128;
         Registry<POOL_SIZE> reg;
 
-        // --- Evaluation counters - //
+        // --- WAITING evaluation counters -- //
         int waiting_eval_counter = 0;
-        const int WAITING_EVAL_FREQ = 20; // number of updates between each evaluation of the WAITING tracks
-        const double WAITING_MAX_AGE = 1; // WAITING A tracks over this age (in seconds) will be removed
+        constexpr int WAITING_EVAL_FREQ = 20; // number of updates between each evaluation of the WAITING tracks
+        constexpr double WAITING_MAX_AGE = 1; // WAITING A tracks over this age (in seconds) will be removed
 
+        // --- CANDIDATE validation -- //
+        constexpr uint16_t CANDIDATE_PASS_THRESHOLD = 5; // how many consecutive pairs need to pass to validate this track
+        constexpr uint16_t CANDIDATE_FAIL_THRESHOLD = 3; // how many consecutive pairs need to fail to remove this track from consideration
+        constexpr double COOLDOWN_SECONDS = 0.5; // how long (in seconds) do we place a failed pair on cooldown before they can pair up again later
+
+        // --- VALIDATED divergence -- //
+        constexpr uint16_t VALIDATED_FAIL_THRESHOLD = 9; // how many consecutive pairs need to fail to destroy a validated track 
+
+        // --- Writer queue -- //
+        WriterQueue writer;
 
     } // end namespace for global variables
 
@@ -69,7 +79,26 @@ namespace threadC {
 
     // extra functions go here (void, etc.)
 
-    // Epipolar and velocity projection check between an A and B state pair
+    // Epipolar check: squared Sampson distance between A and B points
+    // Returns squared distances for speed - compare against squared threshold below
+    inline double sampson_distance_sq(double xa, double ya, double xb, double yb) {
+        double l1 = F[0]*xa + F[1]*ya + F[2]; // epipolar line in B
+        double l2 = F[3]*xa + F[4]*ya + F[5];
+        double l3 = F[6]*xa + F[7]*ya + F[8];
+
+        double m1 = F[0]*xb + F[3]*yb + F[6]; // epipolar line in A
+        double m2 = F[1]*xb + F[4]*yb + F[7];
+
+        double numerator = xb*l1 + yb*l2 + l3; // = pB^T F pA
+        numerator *= numerator;
+
+        double denominator = l1*l1 + l2*l2 + m1*m1 + m2*m2;
+        if (denominator < 1e-12) return std::numeric_limits<double>::max(); //guard against bad results
+
+        return numerator / denominator;
+    }
+
+    // Combined epipolar and velocity projection check between an A and B state pair
     // Returns {success, cost}
     std::pair<bool, double> passes_match_check(const RawState& a, const RawState& b) {
         // NEEDS IMPLEMENTING HERE!!
@@ -184,10 +213,54 @@ namespace threadC {
 
         // -- Track is CANDIDATE -- //
         if (track.status == TrackStatus::CANDIDATE) {
-            //...
+            // Check if this new state passes or fails the matching test
+            auto [suitable, compatibility_score] = passes_match_check(track.last_a, track.last_b); // THIS NEEDS TIME ALIGNING FIRST (TO DO)
+            // YES, it passed!
+            if (suitable) {
+                track.pass_count++;
+                track.fail_count = 0;
+
+                State3D state_3d = triangulate(track.last_a, track.last_b);
+                track.push_buffer(state_3d);
+
+                // VALIDATION CHECK //
+                if (track.pass_count >= CANDIDATE_PASS_THRESHOLD) {
+                    reg.promote_to_validated(idx, writer);
+                }
+            } else {
+            // NO, it didn't pass.
+                track.fail_count++;
+                track.pass_count = 0;
+
+                // REMOVAL CHECK //
+                if (track.fail_count >= CANDIDATE_FAIL_THRESHOLD) {
+                    reg.dissolve(idx, track.tg, COOLDOWN_SECONDS);
+                }
+            }
+            
         } else if (track.status == TrackStatus::VALIDATED) {
         // -- Track is VALIDATED -- //
-            //...
+            //triangulate and push result straight to the writer (regardless of pass/fail of checks below)
+            State3D state_3d = triangulate(track.last_a, track.last_b);
+            writer.push(track.global_id, state_3d); // no buffering
+
+            auto [suitable, compatibility_score] = passes_match_check(track.last_a, track.last_b); // THIS NEEDS TIME ALIGNING FIRST (TO DO)
+            // YES, it passed!
+            if (suitable) {
+                track.pass_count++;
+                track.fail_count = 0;
+            } else {
+            // NO, it didn't pass.
+                track.fail_count++;
+                track.pass_count = 0; 
+
+                // DIVERGENCE CHECK //
+                if (track.fail_count >= VALIDATED_FAIL_THRESHOLD) {
+                    writer.push_close_marker(track.global_id);
+                    reg.close(idx); // end and clear this track slot
+                }
+            }
+
         }
         // ... etc...
 

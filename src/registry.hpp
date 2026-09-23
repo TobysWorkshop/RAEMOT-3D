@@ -104,7 +104,28 @@ public:
         }
     }
 
+    // Output the next global ID
+    int64_t assign_global_id() { return next_global_id++; }
+
+    // Promote a CANDIDATE to a VALIDATED
+    void promote_to_validated(uint16_t idx, WriterQueue& writer) {
+        Track& track = pool.get(idx);
+        // give this track a global ID now that it's validated as a long-term track
+        track.global_id = assign_global_id();
+
+        // Flush the whole candidate buffer as one batch to the writer thread
+        writer.push_batch(track.global_id, track.buffer.data(), track.buffer_count);
+        track.buffer_count = 0; // we're done with buffering from here on
+
+        track.status = TrackStatus::VALIDATED;
+        track.pass_count = 0; // reset these for the validated evaluation (divergence)
+        track.fail_count = 0;
+    }
+
 private:
     TrackPool<POOL_SIZE> pool;
     std::unordered_map<uint16_t, uint16_t> map;
+
+    // global ID management
+    int64_t next_global_id = 0;
 };
