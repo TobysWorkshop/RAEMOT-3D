@@ -5,6 +5,7 @@
 
 #include "parameters.h"
 #include "track_update_queue.hpp"
+#include "track_types.hpp"
 
 #include <cstdint>
 #include <memory>
@@ -30,7 +31,7 @@ namespace processing {
 
     class ProcessingPipeline {
     public:
-        explicit ProcessingPipeline(uint8_t camera_id) : camera_id(camera_id) {}
+        explicit ProcessingPipeline(CamId camera_id) : camera_id(camera_id) {}
 
         // ---- Processing thread ----
         //
@@ -84,7 +85,7 @@ namespace processing {
         void publish_frame(double ts);
         void mru_touch(int slot);
 
-        uint8_t camera_id;
+        CamId camera_id;
 
         // ---- run configuration / state ----
         Parameters params;

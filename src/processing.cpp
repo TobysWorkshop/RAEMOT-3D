@@ -10,6 +10,7 @@
 #include "track_summary_logger.hpp"
 #include "detection_corroboration.hpp"
 #include "raw_event_logger.hpp"
+#include "track_types.hpp"
 
 #include "profiler.hpp"
 
@@ -550,10 +551,10 @@ namespace processing {
                         double tg = static_cast<double>(trigger_pulse_count) + (ts - internal_timestamp_of_last_trigger_pulse);
                                                         // seconds          // fraction of current second
                         const double* state = trk->state_data();
-                        TrackUpdateMsg msg;
-                        msg.camera_id = camera_id;
-                        msg.track_id = static_cast<uint64_t>(trk->getID());
-                        msg.tg = tg; // NEEDS CHANGING FOR GLOBAL TIME SYNC
+                        RawState msg;
+                        msg.cam_id = camera_id;
+                        msg.track_id = static_cast<uint32_t>(trk->getID());
+                        msg.tg = tg;
                         msg.x = state[0];
                         msg.y = state[1];
                         msg.vx = state[2];

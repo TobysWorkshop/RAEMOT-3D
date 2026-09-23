@@ -4,6 +4,7 @@
 // other local file includes
 #include "track_update_queue.hpp"
 #include "threadC_params.h"
+#include "registry.hpp"
 
 // other includes
 #include <cstdint>
@@ -31,14 +32,9 @@ namespace threadC {
 
     namespace { // global variables for this namespace
 
-
-        // --- A cam recent unallocated list ---
-        const int A_un_buffer_max_size = 20;
-        const double max_unallocated_A_age = 1.0; // in seconds
-
-        std::array<A_cam_unallocated_list, 20> A_un_m_buffer{}; // currently 20 slots long. change later if needed
-        size_t A_un_m_mruIndex = 0; // tracks the most recent valid index
-        size_t A_un_m_activeCount = 0; // current number of active, unexpired entries
+        // --- Resistry pointer -- //
+        size_t POOL_SIZE = 128;
+        Registry<POOL_SIZE> reg;
 
 
     } // end namespace for global variables
@@ -68,108 +64,11 @@ namespace threadC {
 
     // extra functions go here (void, etc.)
 
-    // --- A unallocated IDs list ---
-
-    // helper function to recalculate the MRU on early deletion
-    void recalculateMRU() {
-        double newest_tg = -1.0; // Assumes timestamps are non-negative
-        bool found = false;
-
-        for (size_t i = 0; i < A_un_buffer_max_size; ++i) {
-            if (A_un_m_buffer[i].isValid && A_un_m_buffer[i].tg > newest_tg) {
-                newest_tg = A_un_m_buffer[i].tg;
-                A_un_m_mruIndex = i;
-                found = true;
-            }
-        }
-        if (!found) {
-            A_un_m_mruIndex = 0;
-        }
-    }
-
-    // insert a new unallocated A entry into the list - always moves forward and overwrite oldest entry if full
-    void insert_unallocated_A_id(uint64_t A_id, double tg) {
-        size_t target_slot = 0;
-        bool found_empty_slot = false;
-        double oldest_tg = std::numeric_limits<double>::max();
-
-        // Single cache-friendly sweep of 20 elements
-        for (size_t i = 0; i < A_un_buffer_max_size; ++i) {
-            if (!A_un_m_buffer[i].isValid) {
-                target_slot = i;
-                found_empty_slot = true;
-                break; // Instantly claim the first early-deleted or expired slot
-            }
-            if (A_un_m_buffer[i].tg < oldest_tg) {
-                oldest_tg = A_un_m_buffer[i].tg;
-                target_slot = i; // Track oldest active item in case buffer is totally packed
-            }
-        }
-
-        // If we are forced to overwrite an active oldest item, reduce active count
-        if (!found_empty_slot && A_un_m_buffer[target_slot].isValid) {
-            A_un_m_activeCount--;
-        }
-
-        // Write the data into the safe slot
-        A_un_m_buffer[target_slot] = A_cam_unallocated_list{
-            .A_id = A_id, 
-            .tg = tg,
-            .isValid = true
-        };
-
-        A_un_m_mruIndex = target_slot; 
-        A_un_m_activeCount++;
-    }
-    // A unallocated list MRU lookup: the newest entry is always right behind the tail pointer
-    int getMostRecentIndex() {
-        if (A_un_m_activeCount == 0 || !A_un_m_buffer[A_un_m_mruIndex].isValid) {
-            return -1;
-        }
-        return static_cast<int>(A_un_m_mruIndex);
-    }
-    // helper function to access the buffer safely using an index
-    const A_cam_unallocated_list* getEntryAt(size_t index) {
-        if (index >= A_un_buffer_max_size || !A_un_m_buffer[index].isValid) {
-            return nullptr;
-        }
-        return &A_un_m_buffer[index];
-    }
-    // Early deletion - remove an item from the list if it gets moved to the candidate allocation side of processing
-    bool removeEarlyByIndex(size_t index) {
-        if (index >= A_un_buffer_max_size || !A_un_m_buffer[index].isValid) {
-            return false; // slot is already empty or index is invalid
-        }
-
-        A_un_m_buffer[index].isValid = false; // mark this slot as dead
-        A_un_m_activeCount--;
-
-        // if we deleted the MRU item early, we must find the next newest active slot for consistency
-        if (index == A_un_m_mruIndex) {
-            recalculateMRU();
-        }
-        return true;
-    }
-    // A unallocated list expiry check: because it's always sorted, the oldest is ALWAYS at A_un_m_head
-    void remove_expired_unallocated_A_ids(double tg_now) {
-        if (A_un_m_activeCount == 0) return;
-
-        double cutoff = tg_now - max_unallocated_A_age;
-        bool mru_was_invalidated = false;
-
-        for (size_t i = 0; i < A_un_buffer_max_size; ++i) {
-            if (A_un_m_buffer[i].isValid && A_un_m_buffer[i].tg < cutoff) {
-                A_un_m_buffer[i].isValid = false;
-                A_un_m_activeCount--;
-                if (i == A_un_m_mruIndex) { 
-                    mru_was_invalidated = true; 
-                }
-            }
-        }
-
-        if (mru_was_invalidated) {
-            recalculateMRU();
-        }
+    // Epipolar and velocity projection check between an A and B state pair
+    // Returns {success, cost}
+    std::pair<bool, double> passes_match_check(const RawState& a, const RawState& b) {
+        // NEEDS IMPLEMENTING HERE!!
+        return {true, -1.0}; // needs changing obviously
     }
 
     //
@@ -195,8 +94,100 @@ namespace threadC {
         return true;
     }
 
-    void process_track_update(const TrackUpdateMsg& msg) {
+    void process_track_update(const RawState& state) {
+        // look up this camera_id and track_id combo in the registry
+        uint16_t idx = reg.find(state.cam_id, state.track_id);
 
+        // ---- BRANCH 1: NEW COMBO WE'VE NEVER SEEN ---- //
+        if (idx == INVALID_SLOT) {
+            // create a new WAITING slot for it
+            idx = reg.create_waiting(state.cam_id, state.track_id);
+            
+            // if the registry is actually full, alert this problem to the user - will need to be fixed!
+            if (idx == INVALID_SLOT) {
+                std::cerr << "[Thread C] OVERFLOW! Registry pool is exhausted! -- raise POOL_SIZE!!\n";
+                return;
+            }
+
+            // access the new track slot that the registry assigned for us
+            Track& track = reg.get(idx);
+
+            // -- If this update was from Camera A: -- //
+            if (state.cam_id == CamId::A) {
+                // update the track's last A state info
+                track.last_a = state;
+                track.last_a_time = state.tg;
+            } else {
+            // -- If this update was from Camera B: -- //
+                
+                // update the track's last B state info
+                track.last_b = state;
+                track.last_b_time = state.tg;
+
+                // New B: scan all unassigned WAITING A-only tracks for a match
+                
+                // And HERE we begin the age-old courting process as a B track speed dates a selection of potential A track suitors
+                uint16_t best = INVALID_SLOT;
+                double best_compatibility_score = 1e8; // large starting value
+                reg.for_each_active([&](uint16_t suitor_idx, Track& suitor) {
+                    // make sure the suitor isn't itself (you can't date yourself)
+                    if (suitor_idx == idx) return;
+                    // make sure the suitor has status: single
+                    if (suitor.status != TrackStatus::WAITING) return;
+                    // make sure the suitor is an A, not a B, and also double check it didn't somehow sneak in a partner since that previous check (monogamous bee tracks, thank you very much)
+                    if (!suitor.has_a || suitor.has_b) return;
+                    // make sure it didn't just date this suitor, and therefore is in a cooldown period (no rebounds back to exes thank you very much!)
+                    if (suitor.has_cooldown && suitor.cooldown_key == track.key_b) return;
+                    // Let's do a compatibility test!
+                    auto [suitable, compatibility_score] = passes_match_check(suitor.last_a, state);
+                    // If these two are suitable, and have a better compatibility score than previous suitors, take a note and update their standards before moving on
+                    if (suitable && compatibility_score < best_compatibility_score) {
+                        best = suitor_idx;
+                        best_compatibility_score = compatibility_score;
+                    }
+                });
+                // See if anyone in the lineup was actually suitable
+                if (best != INVALID_SLOT) {
+                    // Pair them up!
+                    reg.merge_into_candidate(best, idx);
+                } else {
+                    // currently, this B track just stays single as is in its own track.
+                    // will probs need to add a way to then remove it? Or not add it at all?
+                    // because here it will just sit and never be considered again in the algorithm
+                }
+            }
+
+            return;
+        } // END BRANCH 1 (new combo we've never seen)
+
+        // ---- BRANCH 2: EXISTING COMBO WE'VE SEEN BEFORE ---- //
+        // we need to update the relevant side, do CANDIDATE buffering or VALIDATED stream to file,
+        // and update counters for pass/fail vailidation steps
+
+        // access the track that the registry assigned to this existing combo
+        Track& track = reg.get(idx);
+
+        // update the relevant side's last-seen state data
+        if (state.cam_id == CamId::A) {
+            // Update was from Camera A
+            track.last_a = state;
+            track.last_a_time = state.tg;
+        } else {
+            // Update was from Camera B
+            track.last_b = state;
+            track.last_b_time = state.tg;
+        }
+
+        // -- Track is CANDIDATE -- //
+        if (track.status == TrackStatus::CANDIDATE) {
+            //...
+        } else if (track.status == TrackStatus::VALIDATED) {
+        // -- Track is VALIDATED -- //
+            //...
+        }
+        // ... etc...
+
+        // END BRANCH 2 (existing combo we've seen before)
     }
 
     void teardown() {

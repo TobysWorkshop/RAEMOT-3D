@@ -4,6 +4,7 @@
 #include "processing.hpp"
 #include "track_update_queue.hpp"
 #include "threadC.hpp"
+#include "track_types.hpp" // where CamId class is defined
 
 #include <atomic>
 #include <chrono>
@@ -27,7 +28,7 @@ void handle_sigint(int) {
 // The only thing that they share is the TrackUpdate Queue reference passed into start(),
 // which is itself designed for multi-producer use.
 struct CameraContext {
-    uint8_t camera_id;
+    CamId camera_id;
     std::string config_name;
     sepia::usb::device_properties device;
 
@@ -39,7 +40,7 @@ struct CameraContext {
     std::thread render_thread;
     std::unique_ptr<sepia::evk4::camera> camera_handle;
 
-    CameraContext(uint8_t id, std::string cfg, sepia::usb::device_properties dev)
+    CameraContext(CamId id, std::string cfg, sepia::usb::device_properties dev)
         : camera_id(id), config_name(std::move(cfg)), device(std::move(dev)), pipeline(id) {}
     
     bool start(TrackUpdateQueue& threadC_queue) {
@@ -220,8 +221,8 @@ int main(int argc, char* argv[]) {
     std::thread threadC_thread(run_threadC, std::ref(threadC_queue));
 
     // Camera A and Camera B
-    CameraContext cam_a(0, config_name_a, *dev_a);
-    CameraContext cam_b(1, config_name_b, *dev_b);
+    CameraContext cam_a(CamId::A, config_name_a, *dev_a);
+    CameraContext cam_b(CamId::B, config_name_b, *dev_b);
 
     if (!cam_a.start(threadC_queue)) { return 1; }
     if (!cam_b.start(threadC_queue)) { cam_a.shutdown(); return 1; }

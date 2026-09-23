@@ -15,19 +15,7 @@ namespace threadC {
     void process_track_update(const TrackUpdateMsg& msg);
 
     void teardown();
-
-    // list to store rolling recent unallocated A cam IDs
-    struct A_cam_unallocated_list {
-        uint64_t A_id;
-        double tg;
-        bool isValid = false; // tracks if a slot has been removed early
-    };
-    void recalculateMRU() {}
-    void insert_unallocated_A_id(uint64_t A_id, double tg) {}
-    int getMostRecentIndex() {}
-    const A_cam_unallocated_list* getEntryAt(size_t index) {}
-    bool removeEarlyByIndex(size_t index) {}
-    void remove_expired_unallocated_A_ids(double tg_now) {}
     
-
+    std::pair<bool, double> passes_match_check(const RawState& a, const RawState& b);
+    
 }

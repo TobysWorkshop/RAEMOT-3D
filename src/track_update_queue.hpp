@@ -1,5 +1,7 @@
 #pragma once
 
+#include "track_types.hpp"
+
 #include <atomic>
 #include <condition_variable>
 #include <cstdint>
@@ -13,11 +15,6 @@
 
 // tg is synced to global time!
 
-struct TrackUpdateMsg {
-    uint8_t camera_id; // 0 = camera A (master), 1 = camera B (servant)
-    uint64_t track_id;
-    double tg, x, y, vx, vy;
-};
 
 // Bounded multi-producer (cam A and cam B), single-consumer (thread C) queue.
 // push() is NON-BLOCKING by design. Processing threads should never stall waiting for
@@ -28,7 +25,7 @@ class TrackUpdateQueue {
 public:
     explicit TrackUpdateQueue(size_t capacity) : capacity(capacity) {}
 
-    void push(const TrackUpdateMsg& msg) {
+    void push(const RawState& msg) {
         {
             std::lock_guard<std::mutex> lock(mutex);
             if (queue.size() >= capacity) {
@@ -42,7 +39,7 @@ public:
 
     // Blocks until a message is available or stop() has been called and the queue is drained.
     // Returns false only once fully stopped and drained.
-    bool pop(TrackUpdateMsg& out) {
+    bool pop(RawState& out) {
         std::unique_lock<std::mutex> lock(mutex);
         cv.wait(lock, [&] { return !queue.empty() || stopping; });
         if (queue.empty()) return false;
