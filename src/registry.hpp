@@ -54,6 +54,8 @@ public:
         a.status = TrackStatus::CANDIDATE;
         a.pass_count = 0;
         a.fail_count = 0;
+        a.status_since = b_state.tg;
+        a.fresh_a = a.fresh_b = false;
 
         map[a.key_b] = a_idx; // Now findable by its B key too, since they've paired up
     }
@@ -77,6 +79,9 @@ public:
         track.pass_count = 0;
         track.fail_count = 0;
         track.buffer_count = 0; // discard buffered 3D states (unwritten)
+
+        track.status_since = now;
+        track.fresh_a = track.fresh_b = false;
 
     }
 
@@ -108,16 +113,21 @@ public:
     int64_t assign_global_id() { return next_global_id++; }
 
     // Promote a CANDIDATE to a VALIDATED
-    void promote_to_validated(uint16_t idx, WriterQueue& writer) {
+    void promote_to_validated(uint16_t idx, WriterQueue& writer, double now) {
         Track& track = pool.get(idx);
         // give this track a global ID now that it's validated as a long-term track
         track.global_id = assign_global_id();
 
         // Flush the whole candidate buffer as one batch to the writer thread
-        writer.push_batch(track.global_id, track.buffer.data(), track.buffer_count);
+        wq.push_track_start(t.global_id, now,
+                            static_cast<int32_t>(static_cast<uint32_t>(t.key_a)),
+                            static_cast<int32_t>(static_cast<uint32_t>(t.key_b)),
+                            t.buffer.data(), t.buffer_count);
+        
         track.buffer_count = 0; // we're done with buffering from here on
-
+        
         track.status = TrackStatus::VALIDATED;
+        track.status_since = now;
         track.pass_count = 0; // reset these for the validated evaluation (divergence)
         track.fail_count = 0;
     }

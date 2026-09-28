@@ -8,7 +8,7 @@
 
 // How many 3D states a CANDIDATE track can buffer before it's either
 // validated (buffer gets flushed to writer) or killed (buffer gets discarded)
-constexpr size_t MAX_CANDIDATE_BUFFER = 64;
+constexpr size_t MAX_CANDIDATE_BUFFER = 8;
 
 constexpr uint16_t INVALID_SLOT = 0xFFFF;
 
@@ -16,48 +16,41 @@ constexpr uint16_t INVALID_SLOT = 0xFFFF;
 // Occupies one pool slot for its entire lifetime:
 // INACTIVE -> WAITING -> CANDIDATE -> VALIDATED -> (reset) -> INACTIVE
 // The object is reused across lifetimes rather than being destoyed and recreated.
-struct Track {
+struct alignas(64) Track {
     TrackStatus status = TrackStatus::INACTIVE;
-
-    // which registry key (cam_id, track_id) is currently assigned to this slot
-    // A WAITING track only has one side populated (has_a / has_b tells you which)
-    uint64_t key_a = 0, key_b = 0;
+    // ===== cache line 0: touched by every scan and every update =====
     bool has_a = false, has_b = false;
+    // Cooldown: last partner key this track diverged from + expiry time,
+    // so that it doesn't immediately re-match the same wrong id.
+    bool has_cooldown = false;
+    // bools used to gate evaluation only to new update pairs, not stale older updates
+    bool fresh_a = false, fresh_b = false;
+    // counters for candidate validation
+    uint16_t pass_count = 0;
+    uint16_t fail_count = 0;
+    uint16_t buffer_count = 0;
 
-    RawState last_a{}, last_b{};
-    double last_a_time = 0.0, last_b_time = 0.0;
-
+    uint64_t cooldown_key = 0;
+    double cooldown_until = 0.0;
+    double last_a_time = 0.0;
+    double last_b_time = 0.0;
+    double status_since = 0.0;
+    uint64_t key_a = 0;
+    
+    // ===== cache line 1: read by the WAITING scan =====
+    RawState last_a{};
+    uint64_t key_b = 0;
     // global id assigned at the moment of validation, used downstream for fiel output
     // -1 until validated
     int64_t global_id = -1;
 
-    // counters for candidate validation
-    uint16_t pass_count = 0;
-    uint16_t fail_count = 0;
-
-    // state buffer to be filled while still a CANDIDATE. Drained and unused once VALIDATED
+    // ===== only touched once paired =====
+    RawState last_b{};
     std::array<State3D, MAX_CANDIDATE_BUFFER> buffer{};
-    uint16_t buffer_count = 0;
-
-    // Cooldown: last partner key this track diverged from + expiry time,
-    // so that it doesn't immediately re-match the same wrong id.
-    uint64_t cooldown_key = 0;
-    double cooldown_until = 0.0;
-    bool has_cooldown = false;
+    
 
     // reset function to clear old furnature from previous track tenants in this slot
-    void reset() {
-        status = TrackStatus::INACTIVE;
-        key_a = key_b = 0;
-        has_a = has_b = false;
-        last_a = RawState{};
-        last_b = RawState{};
-        last_a_time = last_b_time = 0.0;
-        global_id = -1;
-        pass_count = fail_count = 0;
-        buffer_count = 0;
-        has_cooldown = false;
-    }
+    void reset() { *this = Track{}; }
 
     // function to append a 3D state to the buffer. Returns true if added, false if already full
     bool push_buffer(const State3D& state) {
