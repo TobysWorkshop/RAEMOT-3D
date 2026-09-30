@@ -34,13 +34,13 @@ namespace raemot3d_file {
     };
     static_assert(sizeof(FileHeader) == 64, "FileHeader must by 64 bytes!");
 
-    struct PointPayload { double x, y, z, vz, vy, vz; };
+    struct PointPayload { double x, y, z, vx, vy, vz; };
     struct OpenPayload { 
         int32_t a_track_id; 
         int32_t b_track_id; 
         uint8_t reserved[40]; 
     };
-    struct ClosePayload { uint8_t reserved[40]; };
+    struct ClosePayload { uint8_t reserved[48]; };
 
     struct alignas(64) Record {
         uint8_t type;

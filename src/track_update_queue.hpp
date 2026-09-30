@@ -59,7 +59,7 @@ private:
     size_t capacity;
     std::mutex mutex;
     std::condition_variable cv;
-    std::deque<TrackUpdateMsg> queue;
+    std::deque<RawState> queue;
     bool stopping = false;
     std::atomic<uint64_t> dropped_count_{0};
 };

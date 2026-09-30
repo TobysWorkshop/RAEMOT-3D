@@ -12,10 +12,8 @@ namespace threadC {
 
     bool setup(const std::string& config_name);
 
-    void process_track_update(const TrackUpdateMsg& msg);
+    void process_track_update(const RawState& msg);
 
     void teardown();
-    
-    std::pair<bool, double> passes_match_check(const RawState& a, const RawState& b);
     
 }

@@ -7,35 +7,38 @@
 #include "registry.hpp"
 
 // other includes
-#include <cstdint>
-#include <iostream>
-#include "yaml-cpp/yaml.h"      
-#include <eigen3/Eigen/Dense>   
+#include <array>
 #include <algorithm>
 #include <chrono>
-#include <deque>
-#include <filesystem>           
-#include <fstream>               
-#include <iomanip>
-#include <memory>
-#include <math.h>
-#include <opencv2/core/core.hpp>     
-#include <opencv2/highgui/highgui.hpp> 
-#include <opencv2/imgproc.hpp>  
-#include <string>
-#include <vector>
-#include <queue>
-#include <stdexcept>
-#include <unistd.h>
-#include <array>
-#include <limits>
+#include <cstdint>
 #include <cmath>
+#include <ctime>
+#include <filesystem>
+#include <iomanip>
+#include <iostream>
+#include <limits>
+#include <sstream>
+#include <string>
+#include <unistd.h>
+#include <eigen3/Eigen/Dense>
 
 // custom matrix defs for simplicity
 using Mat3 = std::array<double, 9>; //row-major 3x3 (for fundamental F matrix)
 using Mat34 = std::array<double, 12>; // row-major 3x4 (for projection P matricies)
 
 namespace threadC {
+
+    // forward-declared structs for use in global namespace after
+    struct MatchResult {
+        bool suitable = false;
+        double compatibility_score = 1e18;
+        State3D triangulation{};
+    };
+
+    struct RejectEntry { 
+        uint64_t key = 0; 
+        double retry_at = 0.0; 
+    };
 
     namespace { // global variables for this namespace
 
@@ -80,9 +83,12 @@ namespace threadC {
         Mat34 P_B;
 
         // performance counters for final log on teardown
-        uint16_t n_validated = 0;
-        uint16_t n_dissolved = 0;
-        uint16_t pool_highest_load = 0;
+        uint64_t n_validated = 0;
+        uint64_t n_dissolved = 0;
+        uint64_t pool_highest_load = 0;
+
+        // parameters def
+        ThreadCParameters params;
 
     } // end namespace for global variables
 
@@ -109,17 +115,6 @@ namespace threadC {
         }
     }
 
-    struct MatchResult {
-        bool suitable = false;
-        double compatibility_score = 1e18;
-        State3D triangulation{};
-    };
-
-    struct RejectEntry { 
-        uint64_t key = 0; 
-        double retry_at = 0.0; 
-    }
-
     // --- Full evaluation sweep --- //
     void sweep(double now) {
         reg.for_each_active([&](uint16_t i, Track& track) {
@@ -144,10 +139,12 @@ namespace threadC {
             default: break;
             }
         });
+        // for output log at the end - can remove if unneeded:
+        pool_high_water = std::max<uint64_t>(pool_high_water, reg.in_use());
     }
 
     // --- B id reject cache things --- //
-    inline bool recently_rejected(uint16_t key, double now) {
+    inline bool recently_rejected(uint64_t key, double now) {
         for (const auto& e : reject_cache) if (e.key == key) return now < e.retry_at;
         return false;
     }
@@ -382,6 +379,7 @@ namespace threadC {
                 // And HERE we begin the age-old courting process as a B track speed dates a selection of potential A track suitors
             
                 // first, check if this B track id is on the no-date black list
+                const uint64_t b_key = make_key(state.cam_id, state.track_id);
                 if (recently_rejected(b_key, state.tg)) return;
                 // onwards!
                 uint16_t best = INVALID_SLOT;
@@ -514,7 +512,7 @@ namespace threadC {
         // drain any VALIDATED tracks on teardown
         reg.for_each_active([&](uint16_t i, Track& track) {
             if (track.status == TrackStatus::VALIDATED) {
-                writer.push_close_marker(track.global_id, std::max(t.last_a_time, t.last_b_time));
+                writer.push_close_marker(track.global_id, std::max(track.last_a_time, track.last_b_time));
             }
             reg.close(i);
         });
@@ -524,6 +522,11 @@ namespace threadC {
         std::cerr << "[Thread C writer] wrote " << writer.written_records() << ", dropped " << writer.dropped_records() << "\n";
 
         // output some performance notes to terminal log
-        
+        std::cerr << "[Thread C writer] wrote " << writer.written_records()
+                  << ", dropped " << writer.dropped_records() << "\n";
+        std::cerr << "[Thread C] validated=" << n_validated
+                  << " dissolved=" << n_dissolved
+                  << " pool_high_water=" << pool_high_water
+                  << "/" << POOL_SIZE << "\n";
     }   
 } // namespace threadC
