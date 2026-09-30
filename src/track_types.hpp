@@ -14,6 +14,7 @@ struct RawState {
     int32_t track_id = -1;
     CamId cam_id = CamId::A;
 };
+using TrackUpdateMsg = RawState; // forgot to rename all references in other files, so this will do for now
 
 // triangulated 3D state (what gets written out of thread C to file)
 struct State3D {

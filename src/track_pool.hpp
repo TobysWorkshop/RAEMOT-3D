@@ -62,7 +62,7 @@ struct alignas(64) Track {
 };
 
 // ---- Fixed-size Track Pool ---- //
-template <uint16_t POOL_SIZE>
+template <size_t POOL_SIZE>
 class TrackPool {
 public:
     TrackPool() {

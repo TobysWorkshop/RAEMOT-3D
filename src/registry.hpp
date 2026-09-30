@@ -2,6 +2,7 @@
 
 #include "track_types.hpp"
 #include "track_pool.hpp"
+#include "writer_queue.hpp"
 
 #include <unordered_map>
 
@@ -119,10 +120,10 @@ public:
         track.global_id = assign_global_id();
 
         // Flush the whole candidate buffer as one batch to the writer thread
-        wq.push_track_start(t.global_id, now,
-                            static_cast<int32_t>(static_cast<uint32_t>(t.key_a)),
-                            static_cast<int32_t>(static_cast<uint32_t>(t.key_b)),
-                            t.buffer.data(), t.buffer_count);
+        writer.push_track_start(track.global_id, now,
+                            static_cast<int32_t>(static_cast<uint32_t>(track.key_a)),
+                            static_cast<int32_t>(static_cast<uint32_t>(track.key_b)),
+                            track.buffer.data(), track.buffer_count);
         
         track.buffer_count = 0; // we're done with buffering from here on
         
@@ -134,7 +135,7 @@ public:
 
 private:
     TrackPool<POOL_SIZE> pool;
-    std::unordered_map<uint16_t, uint16_t> map;
+    std::unordered_map<uint64_t, uint16_t> map;
 
     // global ID management
     int64_t next_global_id = 0;
