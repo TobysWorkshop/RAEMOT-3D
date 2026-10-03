@@ -204,7 +204,7 @@ namespace processing {
             }
         }
  
-        cv::imshow("Video" + std::to_string(camera_id), cimg); // show the reconstructed+annotated frame
+        cv::imshow("Video" + std::to_string(int(camera_id)), cimg); // show the reconstructed+annotated frame
         int key = cv::waitKey(1);
 
         // allow close on ESC key
@@ -387,8 +387,8 @@ namespace processing {
             std::cout << "[cam " << int(camera_id) << "] Display disabled by config. Skipping window creation..." << std::endl;
             return;
         }
-        cv::namedWindow("Video" + std::to_string(camera_id));
-        cv::resizeWindow("Video" + std::to_string(camera_id), params.width, params.height);
+        cv::namedWindow("Video" + std::to_string(int(camera_id)));
+        cv::resizeWindow("Video" + std::to_string(int(camera_id)), params.width, params.height);
  
         // RENDER INITIAL EMPTY FRAME //
         frame_job empty_job;
@@ -400,7 +400,7 @@ namespace processing {
     // Runs once, on the render thread, after the frame_queue is stopped and drained.
     void ProcessingPipeline::render_teardown() {
         if (show_display) {
-            cv::destroyWindow("Video" + std::to_string(camera_id));
+            cv::destroyWindow("Video" + std::to_string(int(camera_id)));
         }
     }
 

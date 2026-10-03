@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.16)
-project(aemot_realtime CXX)
+project(raemot_3d CXX)
 
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
@@ -30,7 +30,7 @@ pkg_check_modules(LIBUSB REQUIRED IMPORTED_TARGET libusb-1.0)
 
 
 #find_package(Boost 1.70 REQUIRED)
-#target_link_libraries(aemot_realtime PRIVATE Boost::boost)
+#target_link_libraries(raemot_3d PRIVATE Boost::boost)
 
 # --- Executable ------------------------------------------------------------
 
@@ -51,19 +51,22 @@ add_executable(aemot_realtime
     ${SHARED_SOURCES}
 )
 
-add_executable(aemot_replay
-    src/file_driver.cpp
+add_executable(raemot_3d
+    src/stereo_driver.cpp
     ${SHARED_SOURCES}
+    src/threadC_params.cpp
+    src/threadC.cpp
+    src/writer_queue.cpp
 )
 
-# gen4/common is a sibling of this project's own root (aemot_realtime/), holding
+# gen4/common is a sibling of this project's own root (raemot_3d/), holding
 # the sepia/psee/evk4 camera headers. Giving it as a proper include path
 # (rather than relying on a "../gen4/common/x.hpp" relative include inside
 # each source file) means moving files around within src/ later can't silently break the camera includes
 target_include_directories(aemot_realtime PRIVATE
     ${CMAKE_SOURCE_DIR}/../gen4/common
 )
-target_include_directories(aemot_replay PRIVATE
+target_include_directories(raemot_3d PRIVATE
     ${CMAKE_SOURCE_DIR}/../gen4/common
 )
 
@@ -75,11 +78,11 @@ target_link_libraries(aemot_realtime PRIVATE
     Threads::Threads
 )
 
-# replay doesn't require libusb at all
-target_link_libraries(aemot_replay PRIVATE
+target_link_libraries(raemot_3d PRIVATE
     ${OpenCV_LIBS}
     Eigen3::Eigen
     yaml-cpp::yaml-cpp
+    PkgConfig::LIBUSB
     Threads::Threads
 )
 
@@ -88,6 +91,6 @@ target_link_libraries(aemot_replay PRIVATE
 # in processing.cpp), assuming configs/ sits exactly one directory above
 # wherever the binary lands. Putting the binary straight in the build
 # directory root (the default here - no subdirectories) keeps that true as
-# long as you build from the aemot_realtime/ project root, e.g. `cmake -B build`
-# run from here puts the binary at aemot_realtime/build/aemot_realtime, and
-# aemot_realtime/build/../configs correctly resolves to aemot_realtime/configs.
+# long as you build from the raemot_3d/ project root, e.g. `cmake -B build`
+# run from here puts the binary at raemot_3d/build/raemot_3d, and
+# raemot_3d/build/../configs correctly resolves to raemot_3d/configs.
