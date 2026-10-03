@@ -6,8 +6,8 @@
 
 ### ***NOTE: THIS README IS FROM THE OLD NON-3D REPO AND HAS NOT BEEN UPDATED YET. THIS IS ALL A WORK IN PROGRESS!***
 
-![system diagram dark mode](system_dark.png)  
-*If you're using light mode, the above system diagram might be hard to see. If so, check out [this light-mode-friendly version](system_light.png) instead :)*
+![system diagram dark mode](raemot3d_architecture_dark.png)  
+*If you're using light mode, the above system diagram might be hard to see. If so, check out [this light-mode-friendly version](raemot3d_architecture_light.png) instead :)*
 
 ## Quick Links!
 [![How to install and build](https://img.shields.io/badge/How%20to%20Install%20and%20Build-BD9048?style=for-the-badge)](#how-to-install-and-build)  
