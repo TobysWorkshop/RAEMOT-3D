@@ -492,7 +492,7 @@ namespace threadC {
         else if (track.status == TrackStatus::VALIDATED) {
         // -- Track is VALIDATED -- //
             
-            // If it passed evaluation, pass the highly accurate velocity-checked state to the writer
+            // If it passed evaluation, pass the state to the writer
             if (passed) {
                 writer.push(track.global_id, eval_result.triangulation);
                 track.fail_count = 0;

@@ -1,0 +1,28 @@
+## ------------------------------ ##
+## RAEMOT_3D Thread C config file ##
+## ------------------------------ ##
+
+## General ##
+# ---------------- #
+
+# F, P_A, P_B are flat, ROW-MAJOR lists - the order you write numbers in IS the matrix order. No transposing needed.
+#
+#   F    : 3x3 fundamental matrix, A -> B      (9 numbers)
+#   P_A  : 3x4 projection matrix for camera A  (12 numbers)
+#   P_B  : 3x4 projection matrix for camera B  (12 numbers)
+
+F: [  0.000000,  0.000000,  0.000000,
+      0.000000,  0.000000, -0.707107,
+      0.000000,  0.707107,  0.000000 ]
+ 
+P_A: [ 1200.0,    0.0,    640.0,    0.0,
+          0.0, 1200.0,    360.0,    0.0,
+          0.0,    0.0,      1.0,    0.0 ]
+ 
+P_B: [ 1200.0,    0.0,    640.0, -120.0,
+          0.0, 1200.0,    360.0,    0.0,
+          0.0,    0.0,      1.0,    0.0 ]
+
+
+save_file : 0 # 1 = save .raemot3d file, 0 = don't save this file
+# ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------- #

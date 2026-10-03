@@ -1,5 +1,8 @@
 #include "parameters.h"
 
+using Mat3 = std::array<double, 9>;
+using Mat34 = std::array<double, 12>;
+
 Parameters loadParametersFromYAML(const std::string &yaml_file_path)
 {
     const YAML::Node config = YAML::LoadFile(yaml_file_path);

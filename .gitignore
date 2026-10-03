@@ -12,5 +12,6 @@ build/
 *.beesum
 *.png
 *.aemotevt
+*.raemot3d
 
 __pycache__

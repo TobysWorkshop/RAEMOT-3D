@@ -16,6 +16,8 @@
 #include <thread>
 #include <vector>
 
+// NOTE: The render thread has been fully disabled here so that it doesn't take up an extra thread space while running this system in stereo. This can be reversed if you want to actually use it (uncomment all the render thread references and code chunks below).
+
 std::atomic<bool> running{true};
 
 void handle_sigint(int) {
@@ -37,7 +39,7 @@ struct CameraContext {
     processing::ProcessingPipeline pipeline;
     std::promise<bool> setup_promise;
     std::thread worker;
-    std::thread render_thread;
+    //std::thread render_thread;
     std::unique_ptr<sepia::evk4::camera> camera_handle;
 
     CameraContext(CamId id, std::string cfg, sepia::usb::device_properties dev)
@@ -70,17 +72,17 @@ struct CameraContext {
         }
 
         // render thread
-        render_thread = std::thread([this]() {
-            pipeline.render_setup();
-            frame_job job;
-            while (frames.pop(job)) {
-                if (pipeline.render_frame(job)) {
-                    running.store(false);
-                    break;
-                }
-            }
-            pipeline.render_teardown();
-        });
+        //render_thread = std::thread([this]() {
+        //    pipeline.render_setup();
+        //    frame_job job;
+        //    while (frames.pop(job)) {
+        //        if (pipeline.render_frame(job)) {
+        //            running.store(false);
+        //            break;
+        //        }
+        //    }
+        //    pipeline.render_teardown();
+        //});
 
         // Physical camera wiring
         auto current_batch = std::make_shared<std::vector<sepia::dvs_event>>();
@@ -134,8 +136,8 @@ struct CameraContext {
         camera_handle.reset(); // stop the physical device first
         events.stop();
         if (worker.joinable()) worker.join();
-        frames.stop();
-        if (render_thread.joinable()) render_thread.join();
+        //frames.stop();
+        //if (render_thread.joinable()) render_thread.join();
     }
 
 };
