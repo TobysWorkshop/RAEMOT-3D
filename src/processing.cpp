@@ -38,6 +38,10 @@
 
 namespace processing {
 
+    // forward declarations to fix build problems
+    ProcessingPipeline::ProcessingPipeline(CamId camera_id) : camera_id(camera_id) {}
+    ProcessingPipeline::~ProcessingPipeline() = default;
+
     namespace {
         // Resolves the directory containing the currently-running executable, by
         // reading the Linux-specific /proc/self/exe self-symlink. This is
@@ -728,3 +732,4 @@ namespace processing {
     }
 
 } // namespace processing
+

@@ -140,7 +140,7 @@ namespace threadC {
             }
         });
         // for output log at the end - can remove if unneeded:
-        pool_high_water = std::max<uint64_t>(pool_high_water, reg.in_use());
+        pool_highest_load = std::max<uint64_t>(pool_highest_load, reg.in_use());
     }
 
     // --- B id reject cache things --- //
@@ -526,7 +526,7 @@ namespace threadC {
                   << ", dropped " << writer.dropped_records() << "\n";
         std::cerr << "[Thread C] validated=" << n_validated
                   << " dissolved=" << n_dissolved
-                  << " pool_high_water=" << pool_high_water
+                  << " pool_highest_load=" << pool_highest_load
                   << "/" << POOL_SIZE << "\n";
     }   
 } // namespace threadC

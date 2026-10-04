@@ -31,7 +31,8 @@ namespace processing {
 
     class ProcessingPipeline {
     public:
-        explicit ProcessingPipeline(CamId camera_id) : camera_id(camera_id) {}
+        explicit ProcessingPipeline(CamId camera_id);
+        ~ProcessingPipeline();
 
         // ---- Processing thread ----
         //
@@ -105,7 +106,7 @@ namespace processing {
 
         // worker thread equivalent variables
         uint64_t trigger_pulse_count = 0;
-        double internal_timestamp_of_last_trigger_pulse = -1.0
+        double internal_timestamp_of_last_trigger_pulse = -1.0;
 
 
         // ---- display / video output ----

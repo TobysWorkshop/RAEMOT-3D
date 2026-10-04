@@ -16,8 +16,6 @@
 #include <thread>
 #include <vector>
 
-// NOTE: The render thread has been fully disabled here so that it doesn't take up an extra thread space while running this system in stereo. This can be reversed if you want to actually use it (uncomment all the render thread references and code chunks below).
-
 std::atomic<bool> running{true};
 
 void handle_sigint(int) {
@@ -39,8 +37,8 @@ struct CameraContext {
     processing::ProcessingPipeline pipeline;
     std::promise<bool> setup_promise;
     std::thread worker;
-    //std::thread render_thread;
-    std::unique_ptr<sepia::evk4::camera> camera_handle;
+    std::thread render_thread;
+    std::unique_ptr<sepia::evk4::base_camera> camera_handle;
 
     CameraContext(CamId id, std::string cfg, sepia::usb::device_properties dev)
         : camera_id(id), config_name(std::move(cfg)), device(std::move(dev)), pipeline(id) {}
@@ -72,17 +70,17 @@ struct CameraContext {
         }
 
         // render thread
-        //render_thread = std::thread([this]() {
-        //    pipeline.render_setup();
-        //    frame_job job;
-        //    while (frames.pop(job)) {
-        //        if (pipeline.render_frame(job)) {
-        //            running.store(false);
-        //            break;
-        //        }
-        //    }
-        //    pipeline.render_teardown();
-        //});
+        render_thread = std::thread([this]() {
+            pipeline.render_setup();
+            frame_job job;
+            while (frames.pop(job)) {
+                if (pipeline.render_frame(job)) {
+                    running.store(false);
+                    break;
+                }
+            }
+            pipeline.render_teardown();
+        });
 
         // Physical camera wiring
         auto current_batch = std::make_shared<std::vector<sepia::dvs_event>>();
@@ -115,19 +113,11 @@ struct CameraContext {
             running.store(false);
         };
 
-        camera_handle = std::make_unique<sepia::evk4::camera>(sepia::evk4::make_camera(
-            handle_event,
-            handle_trigger_event,
-            before_buffer,
-            after_buffer,
-            handle_exception,
-            sepia::evk4::default_parameters,
-            device.serial,
-            std::chrono::milliseconds(100),
-            128, // buffers_count
-            16384, // fifo_size
-            [this]() { std::cerr << "[cam " << int(camera_id) << "] warning: packet dropped\n"; }
-        ));
+        camera_handle = sepia::evk4::make_camera(
+            handle_event, handle_trigger_event, before_buffer, after_buffer, handle_exception,
+            sepia::evk4::default_parameters, device.serial, std::chrono::milliseconds(100),
+            128, 16384, [this]() { std::cerr << "[cam " << int(camera_id) << "] warning: packet dropped\n"; }
+        );
     
         return true;
     }
@@ -136,8 +126,8 @@ struct CameraContext {
         camera_handle.reset(); // stop the physical device first
         events.stop();
         if (worker.joinable()) worker.join();
-        //frames.stop();
-        //if (render_thread.joinable()) render_thread.join();
+        frames.stop();
+        if (render_thread.joinable()) render_thread.join();
     }
 
 };
@@ -215,7 +205,7 @@ int main(int argc, char* argv[]) {
     
     // Thread C
     if (!threadC::setup(config_name_c)) {
-        std::cerr << "[Thread C] setup failed, aborting\n"
+        std::cerr << "[Thread C] setup failed, aborting\n";
         return 1;
     }
     
