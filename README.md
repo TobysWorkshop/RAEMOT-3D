@@ -51,7 +51,7 @@ working_directory
     |         |---- /configs
     |         |---- /src
     |         |---- /track_logs
-    |         |---- /CMakeLists.txt
+    |         |---- CMakeLists.txt
     |         |---- this README.md
     |
     |---- /gen4
