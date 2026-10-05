@@ -13,9 +13,9 @@
 #include <unistd.h>
 
 namespace {
-constexpr uint64_t PREALLOC_CHUNK = 64ull << 20;                  // grow file 64 MiB at a time
-constexpr auto     IDLE_SLEEP     = std::chrono::milliseconds(2); // poll period when ring is empty
-constexpr auto     SYNC_INTERVAL  = std::chrono::seconds(1);      // fdatasync at most this often
+    constexpr uint64_t PREALLOC_CHUNK = 64ull << 20;                  // grow file 64 MiB at a time
+    constexpr auto     IDLE_SLEEP     = std::chrono::milliseconds(2); // poll period when ring is empty
+    constexpr auto     SYNC_INTERVAL  = std::chrono::seconds(1);      // fdatasync at most this often
 }
 
 bool WriterQueue::start(const std::string& path, size_t ring_capacity_records) {
