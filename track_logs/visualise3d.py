@@ -22,6 +22,8 @@ import random
 import struct
 from datetime import datetime
 from zoneinfo import ZoneInfo
+import matplotlib
+matplotlib.use('Qt5Agg')
 import matplotlib.pyplot as plt
 import matplotlib.cm as cm
 from matplotlib.colors import hsv_to_rgb
