@@ -162,7 +162,7 @@ Upon starting the system, a .raemot3d file for that run will be created in the `
 | Magic bytes  | char[8] | "R A E M O T 3 D"  | 8  |
 | version | uint32 | 1 | 4 |
 | record_size | uint32 | 64, *the size of one 3D state record* | 4 |
-| created_unix_ns | uint64 | 80, *the size of one kalman log record* | 8 |
+| created_unix_ns | uint64 | 80, *the UNIX timestamp when the file was created* | 8 |
 | reserved[40] | uint8 | 0[40] | 40 |
 | **<ins>3D state record (64 bytes), repeated</ins>** |
 | type | uint8 | *number indicating what kind of record this is (see below)* | 1 |
