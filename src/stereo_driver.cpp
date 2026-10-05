@@ -15,6 +15,9 @@
 #include <string>
 #include <thread>
 #include <vector>
+#include <pthread.h>
+#include <sched.h>
+#include <cstring>
 
 std::atomic<bool> running{true};
 
@@ -37,12 +40,12 @@ struct CameraContext {
     processing::ProcessingPipeline pipeline;
     std::promise<bool> setup_promise;
     std::thread worker;
-    std::thread render_thread;
+    //std::thread render_thread;
     std::unique_ptr<sepia::evk4::base_camera> camera_handle;
 
     CameraContext(CamId id, std::string cfg, sepia::usb::device_properties dev)
         : camera_id(id), config_name(std::move(cfg)), device(std::move(dev)), pipeline(id) {}
-    
+
     bool start(TrackUpdateQueue& threadC_queue) {
         // Worker thread: this is the ONLY thread that calls into this camera's
         // ProcessingPipeline, so process_batch never needs to worry about
@@ -70,17 +73,17 @@ struct CameraContext {
         }
 
         // render thread
-        render_thread = std::thread([this]() {
-            pipeline.render_setup();
-            frame_job job;
-            while (frames.pop(job)) {
-                if (pipeline.render_frame(job)) {
-                    running.store(false);
-                    break;
-                }
-            }
-            pipeline.render_teardown();
-        });
+        //render_thread = std::thread([this]() {
+        //    pipeline.render_setup();
+        //    frame_job job;
+        //    while (frames.pop(job)) {
+        //        if (pipeline.render_frame(job)) {
+        //            running.store(false);
+        //            break;
+        //        }
+        //    }
+        //    pipeline.render_teardown();
+        //});
 
         // Physical camera wiring
         auto current_batch = std::make_shared<std::vector<sepia::dvs_event>>();
@@ -126,11 +129,24 @@ struct CameraContext {
         camera_handle.reset(); // stop the physical device first
         events.stop();
         if (worker.joinable()) worker.join();
-        frames.stop();
-        if (render_thread.joinable()) render_thread.join();
+        //frames.stop();
+        //if (render_thread.joinable()) render_thread.join();
     }
 
 };
+
+// Function to pin a thread to a specific cpu core
+bool pin_thread_to_core(std::thread&t, int core_id) {
+        cpu_set_t cpuset;
+        CPU_ZERO(&cpuset);
+        CPU_SET(core_id, &cpuset);
+        int rc = pthread_setaffinity_np(t.native_handle(), sizeof(cpu_set_t), &cpuset);
+        if (rc != 0) {
+            std::cerr << "pin_thread_to_core(core " << core_id << ") failed: " << std::strerror(rc) << "\n";
+            return false;
+        }
+        return true;
+    }
 
 // THREAD C //
 void run_threadC(TrackUpdateQueue& threadC_queue) {
@@ -218,6 +234,12 @@ int main(int argc, char* argv[]) {
 
     if (!cam_a.start(threadC_queue)) { return 1; }
     if (!cam_b.start(threadC_queue)) { cam_a.shutdown(); return 1; }
+
+    // pin threads to seperate cpu cores
+    // leave core 0 for general OS tasks
+    pin_thread_to_core(cam_a.worker, 1);
+    pin_thread_to_core(cam_b.worker, 2);
+    pin_thread_to_core(threadC_thread, 3);
 
     while (running.load()) {
         std::this_thread::sleep_for(std::chrono::seconds(1));

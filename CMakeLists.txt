@@ -59,6 +59,9 @@ add_executable(raemot_3d
     src/writer_queue.cpp
 )
 
+# Tie the raemot_3d binary to this computer's specific setup for even more optimisation - NOTE: this does mean that it will only work on the computer you build it on
+target_compile_options(raemot_3d PRIVATE -march=native)
+
 # gen4/common is a sibling of this project's own root (raemot_3d/), holding
 # the sepia/psee/evk4 camera headers. Giving it as a proper include path
 # (rather than relying on a "../gen4/common/x.hpp" relative include inside
