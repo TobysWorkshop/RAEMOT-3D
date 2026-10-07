@@ -14,7 +14,7 @@ ThreadCParameters loadThreadCParametersFromYAML(const std::string &yaml_file_pat
     params.P_A = config["P_A"].as<Mat34>();
     params.P_B = config["P_B"].as<Mat34>();
 
-    params.save_file = config["save_file"].as<bool>();
+    params.save_file = config["save_file"].as<int>();
     
     return params;
 }

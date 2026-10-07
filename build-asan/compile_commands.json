@@ -1,0 +1,140 @@
+[
+{
+  "directory": "/home/str-anu/Gen4/RAEMOT_3D/build-asan",
+  "command": "/usr/bin/c++  -I/home/str-anu/Gen4/RAEMOT_3D/../gen4/common -isystem /usr/include/opencv4 -isystem /usr/include/eigen3 -isystem /usr/include/libusb-1.0 -fsanitize=address -fno-omit-frame-pointer -g -g -std=gnu++17 -o CMakeFiles/aemot_realtime.dir/src/camera_driver.cpp.o -c /home/str-anu/Gen4/RAEMOT_3D/src/camera_driver.cpp",
+  "file": "/home/str-anu/Gen4/RAEMOT_3D/src/camera_driver.cpp",
+  "output": "CMakeFiles/aemot_realtime.dir/src/camera_driver.cpp.o"
+},
+{
+  "directory": "/home/str-anu/Gen4/RAEMOT_3D/build-asan",
+  "command": "/usr/bin/c++  -I/home/str-anu/Gen4/RAEMOT_3D/../gen4/common -isystem /usr/include/opencv4 -isystem /usr/include/eigen3 -isystem /usr/include/libusb-1.0 -fsanitize=address -fno-omit-frame-pointer -g -g -std=gnu++17 -o CMakeFiles/aemot_realtime.dir/src/processing.cpp.o -c /home/str-anu/Gen4/RAEMOT_3D/src/processing.cpp",
+  "file": "/home/str-anu/Gen4/RAEMOT_3D/src/processing.cpp",
+  "output": "CMakeFiles/aemot_realtime.dir/src/processing.cpp.o"
+},
+{
+  "directory": "/home/str-anu/Gen4/RAEMOT_3D/build-asan",
+  "command": "/usr/bin/c++  -I/home/str-anu/Gen4/RAEMOT_3D/../gen4/common -isystem /usr/include/opencv4 -isystem /usr/include/eigen3 -isystem /usr/include/libusb-1.0 -fsanitize=address -fno-omit-frame-pointer -g -g -std=gnu++17 -o CMakeFiles/aemot_realtime.dir/src/TrackManager.cpp.o -c /home/str-anu/Gen4/RAEMOT_3D/src/TrackManager.cpp",
+  "file": "/home/str-anu/Gen4/RAEMOT_3D/src/TrackManager.cpp",
+  "output": "CMakeFiles/aemot_realtime.dir/src/TrackManager.cpp.o"
+},
+{
+  "directory": "/home/str-anu/Gen4/RAEMOT_3D/build-asan",
+  "command": "/usr/bin/c++  -I/home/str-anu/Gen4/RAEMOT_3D/../gen4/common -isystem /usr/include/opencv4 -isystem /usr/include/eigen3 -isystem /usr/include/libusb-1.0 -fsanitize=address -fno-omit-frame-pointer -g -g -std=gnu++17 -o CMakeFiles/aemot_realtime.dir/src/kalman.cpp.o -c /home/str-anu/Gen4/RAEMOT_3D/src/kalman.cpp",
+  "file": "/home/str-anu/Gen4/RAEMOT_3D/src/kalman.cpp",
+  "output": "CMakeFiles/aemot_realtime.dir/src/kalman.cpp.o"
+},
+{
+  "directory": "/home/str-anu/Gen4/RAEMOT_3D/build-asan",
+  "command": "/usr/bin/c++  -I/home/str-anu/Gen4/RAEMOT_3D/../gen4/common -isystem /usr/include/opencv4 -isystem /usr/include/eigen3 -isystem /usr/include/libusb-1.0 -fsanitize=address -fno-omit-frame-pointer -g -g -std=gnu++17 -o CMakeFiles/aemot_realtime.dir/src/SAEdetector.cpp.o -c /home/str-anu/Gen4/RAEMOT_3D/src/SAEdetector.cpp",
+  "file": "/home/str-anu/Gen4/RAEMOT_3D/src/SAEdetector.cpp",
+  "output": "CMakeFiles/aemot_realtime.dir/src/SAEdetector.cpp.o"
+},
+{
+  "directory": "/home/str-anu/Gen4/RAEMOT_3D/build-asan",
+  "command": "/usr/bin/c++  -I/home/str-anu/Gen4/RAEMOT_3D/../gen4/common -isystem /usr/include/opencv4 -isystem /usr/include/eigen3 -isystem /usr/include/libusb-1.0 -fsanitize=address -fno-omit-frame-pointer -g -g -std=gnu++17 -o CMakeFiles/aemot_realtime.dir/src/parameters.cpp.o -c /home/str-anu/Gen4/RAEMOT_3D/src/parameters.cpp",
+  "file": "/home/str-anu/Gen4/RAEMOT_3D/src/parameters.cpp",
+  "output": "CMakeFiles/aemot_realtime.dir/src/parameters.cpp.o"
+},
+{
+  "directory": "/home/str-anu/Gen4/RAEMOT_3D/build-asan",
+  "command": "/usr/bin/c++  -I/home/str-anu/Gen4/RAEMOT_3D/../gen4/common -isystem /usr/include/opencv4 -isystem /usr/include/eigen3 -isystem /usr/include/libusb-1.0 -fsanitize=address -fno-omit-frame-pointer -g -g -std=gnu++17 -o CMakeFiles/aemot_realtime.dir/src/SAE.cpp.o -c /home/str-anu/Gen4/RAEMOT_3D/src/SAE.cpp",
+  "file": "/home/str-anu/Gen4/RAEMOT_3D/src/SAE.cpp",
+  "output": "CMakeFiles/aemot_realtime.dir/src/SAE.cpp.o"
+},
+{
+  "directory": "/home/str-anu/Gen4/RAEMOT_3D/build-asan",
+  "command": "/usr/bin/c++  -I/home/str-anu/Gen4/RAEMOT_3D/../gen4/common -isystem /usr/include/opencv4 -isystem /usr/include/eigen3 -isystem /usr/include/libusb-1.0 -fsanitize=address -fno-omit-frame-pointer -g -g -std=gnu++17 -o CMakeFiles/aemot_realtime.dir/src/track_logger.cpp.o -c /home/str-anu/Gen4/RAEMOT_3D/src/track_logger.cpp",
+  "file": "/home/str-anu/Gen4/RAEMOT_3D/src/track_logger.cpp",
+  "output": "CMakeFiles/aemot_realtime.dir/src/track_logger.cpp.o"
+},
+{
+  "directory": "/home/str-anu/Gen4/RAEMOT_3D/build-asan",
+  "command": "/usr/bin/c++  -I/home/str-anu/Gen4/RAEMOT_3D/../gen4/common -isystem /usr/include/opencv4 -isystem /usr/include/eigen3 -isystem /usr/include/libusb-1.0 -fsanitize=address -fno-omit-frame-pointer -g -g -std=gnu++17 -o CMakeFiles/aemot_realtime.dir/src/track_summary_logger.cpp.o -c /home/str-anu/Gen4/RAEMOT_3D/src/track_summary_logger.cpp",
+  "file": "/home/str-anu/Gen4/RAEMOT_3D/src/track_summary_logger.cpp",
+  "output": "CMakeFiles/aemot_realtime.dir/src/track_summary_logger.cpp.o"
+},
+{
+  "directory": "/home/str-anu/Gen4/RAEMOT_3D/build-asan",
+  "command": "/usr/bin/c++  -I/home/str-anu/Gen4/RAEMOT_3D/../gen4/common -isystem /usr/include/opencv4 -isystem /usr/include/eigen3 -isystem /usr/include/libusb-1.0 -fsanitize=address -fno-omit-frame-pointer -g -g -std=gnu++17 -o CMakeFiles/aemot_realtime.dir/src/raw_event_logger.cpp.o -c /home/str-anu/Gen4/RAEMOT_3D/src/raw_event_logger.cpp",
+  "file": "/home/str-anu/Gen4/RAEMOT_3D/src/raw_event_logger.cpp",
+  "output": "CMakeFiles/aemot_realtime.dir/src/raw_event_logger.cpp.o"
+},
+{
+  "directory": "/home/str-anu/Gen4/RAEMOT_3D/build-asan",
+  "command": "/usr/bin/c++  -I/home/str-anu/Gen4/RAEMOT_3D/../gen4/common -isystem /usr/include/opencv4 -isystem /usr/include/eigen3 -isystem /usr/include/libusb-1.0 -fsanitize=address -fno-omit-frame-pointer -g -g -std=gnu++17 -march=native -o CMakeFiles/raemot_3d.dir/src/stereo_driver.cpp.o -c /home/str-anu/Gen4/RAEMOT_3D/src/stereo_driver.cpp",
+  "file": "/home/str-anu/Gen4/RAEMOT_3D/src/stereo_driver.cpp",
+  "output": "CMakeFiles/raemot_3d.dir/src/stereo_driver.cpp.o"
+},
+{
+  "directory": "/home/str-anu/Gen4/RAEMOT_3D/build-asan",
+  "command": "/usr/bin/c++  -I/home/str-anu/Gen4/RAEMOT_3D/../gen4/common -isystem /usr/include/opencv4 -isystem /usr/include/eigen3 -isystem /usr/include/libusb-1.0 -fsanitize=address -fno-omit-frame-pointer -g -g -std=gnu++17 -march=native -o CMakeFiles/raemot_3d.dir/src/processing.cpp.o -c /home/str-anu/Gen4/RAEMOT_3D/src/processing.cpp",
+  "file": "/home/str-anu/Gen4/RAEMOT_3D/src/processing.cpp",
+  "output": "CMakeFiles/raemot_3d.dir/src/processing.cpp.o"
+},
+{
+  "directory": "/home/str-anu/Gen4/RAEMOT_3D/build-asan",
+  "command": "/usr/bin/c++  -I/home/str-anu/Gen4/RAEMOT_3D/../gen4/common -isystem /usr/include/opencv4 -isystem /usr/include/eigen3 -isystem /usr/include/libusb-1.0 -fsanitize=address -fno-omit-frame-pointer -g -g -std=gnu++17 -march=native -o CMakeFiles/raemot_3d.dir/src/TrackManager.cpp.o -c /home/str-anu/Gen4/RAEMOT_3D/src/TrackManager.cpp",
+  "file": "/home/str-anu/Gen4/RAEMOT_3D/src/TrackManager.cpp",
+  "output": "CMakeFiles/raemot_3d.dir/src/TrackManager.cpp.o"
+},
+{
+  "directory": "/home/str-anu/Gen4/RAEMOT_3D/build-asan",
+  "command": "/usr/bin/c++  -I/home/str-anu/Gen4/RAEMOT_3D/../gen4/common -isystem /usr/include/opencv4 -isystem /usr/include/eigen3 -isystem /usr/include/libusb-1.0 -fsanitize=address -fno-omit-frame-pointer -g -g -std=gnu++17 -march=native -o CMakeFiles/raemot_3d.dir/src/kalman.cpp.o -c /home/str-anu/Gen4/RAEMOT_3D/src/kalman.cpp",
+  "file": "/home/str-anu/Gen4/RAEMOT_3D/src/kalman.cpp",
+  "output": "CMakeFiles/raemot_3d.dir/src/kalman.cpp.o"
+},
+{
+  "directory": "/home/str-anu/Gen4/RAEMOT_3D/build-asan",
+  "command": "/usr/bin/c++  -I/home/str-anu/Gen4/RAEMOT_3D/../gen4/common -isystem /usr/include/opencv4 -isystem /usr/include/eigen3 -isystem /usr/include/libusb-1.0 -fsanitize=address -fno-omit-frame-pointer -g -g -std=gnu++17 -march=native -o CMakeFiles/raemot_3d.dir/src/SAEdetector.cpp.o -c /home/str-anu/Gen4/RAEMOT_3D/src/SAEdetector.cpp",
+  "file": "/home/str-anu/Gen4/RAEMOT_3D/src/SAEdetector.cpp",
+  "output": "CMakeFiles/raemot_3d.dir/src/SAEdetector.cpp.o"
+},
+{
+  "directory": "/home/str-anu/Gen4/RAEMOT_3D/build-asan",
+  "command": "/usr/bin/c++  -I/home/str-anu/Gen4/RAEMOT_3D/../gen4/common -isystem /usr/include/opencv4 -isystem /usr/include/eigen3 -isystem /usr/include/libusb-1.0 -fsanitize=address -fno-omit-frame-pointer -g -g -std=gnu++17 -march=native -o CMakeFiles/raemot_3d.dir/src/parameters.cpp.o -c /home/str-anu/Gen4/RAEMOT_3D/src/parameters.cpp",
+  "file": "/home/str-anu/Gen4/RAEMOT_3D/src/parameters.cpp",
+  "output": "CMakeFiles/raemot_3d.dir/src/parameters.cpp.o"
+},
+{
+  "directory": "/home/str-anu/Gen4/RAEMOT_3D/build-asan",
+  "command": "/usr/bin/c++  -I/home/str-anu/Gen4/RAEMOT_3D/../gen4/common -isystem /usr/include/opencv4 -isystem /usr/include/eigen3 -isystem /usr/include/libusb-1.0 -fsanitize=address -fno-omit-frame-pointer -g -g -std=gnu++17 -march=native -o CMakeFiles/raemot_3d.dir/src/SAE.cpp.o -c /home/str-anu/Gen4/RAEMOT_3D/src/SAE.cpp",
+  "file": "/home/str-anu/Gen4/RAEMOT_3D/src/SAE.cpp",
+  "output": "CMakeFiles/raemot_3d.dir/src/SAE.cpp.o"
+},
+{
+  "directory": "/home/str-anu/Gen4/RAEMOT_3D/build-asan",
+  "command": "/usr/bin/c++  -I/home/str-anu/Gen4/RAEMOT_3D/../gen4/common -isystem /usr/include/opencv4 -isystem /usr/include/eigen3 -isystem /usr/include/libusb-1.0 -fsanitize=address -fno-omit-frame-pointer -g -g -std=gnu++17 -march=native -o CMakeFiles/raemot_3d.dir/src/track_logger.cpp.o -c /home/str-anu/Gen4/RAEMOT_3D/src/track_logger.cpp",
+  "file": "/home/str-anu/Gen4/RAEMOT_3D/src/track_logger.cpp",
+  "output": "CMakeFiles/raemot_3d.dir/src/track_logger.cpp.o"
+},
+{
+  "directory": "/home/str-anu/Gen4/RAEMOT_3D/build-asan",
+  "command": "/usr/bin/c++  -I/home/str-anu/Gen4/RAEMOT_3D/../gen4/common -isystem /usr/include/opencv4 -isystem /usr/include/eigen3 -isystem /usr/include/libusb-1.0 -fsanitize=address -fno-omit-frame-pointer -g -g -std=gnu++17 -march=native -o CMakeFiles/raemot_3d.dir/src/track_summary_logger.cpp.o -c /home/str-anu/Gen4/RAEMOT_3D/src/track_summary_logger.cpp",
+  "file": "/home/str-anu/Gen4/RAEMOT_3D/src/track_summary_logger.cpp",
+  "output": "CMakeFiles/raemot_3d.dir/src/track_summary_logger.cpp.o"
+},
+{
+  "directory": "/home/str-anu/Gen4/RAEMOT_3D/build-asan",
+  "command": "/usr/bin/c++  -I/home/str-anu/Gen4/RAEMOT_3D/../gen4/common -isystem /usr/include/opencv4 -isystem /usr/include/eigen3 -isystem /usr/include/libusb-1.0 -fsanitize=address -fno-omit-frame-pointer -g -g -std=gnu++17 -march=native -o CMakeFiles/raemot_3d.dir/src/raw_event_logger.cpp.o -c /home/str-anu/Gen4/RAEMOT_3D/src/raw_event_logger.cpp",
+  "file": "/home/str-anu/Gen4/RAEMOT_3D/src/raw_event_logger.cpp",
+  "output": "CMakeFiles/raemot_3d.dir/src/raw_event_logger.cpp.o"
+},
+{
+  "directory": "/home/str-anu/Gen4/RAEMOT_3D/build-asan",
+  "command": "/usr/bin/c++  -I/home/str-anu/Gen4/RAEMOT_3D/../gen4/common -isystem /usr/include/opencv4 -isystem /usr/include/eigen3 -isystem /usr/include/libusb-1.0 -fsanitize=address -fno-omit-frame-pointer -g -g -std=gnu++17 -march=native -o CMakeFiles/raemot_3d.dir/src/threadC_params.cpp.o -c /home/str-anu/Gen4/RAEMOT_3D/src/threadC_params.cpp",
+  "file": "/home/str-anu/Gen4/RAEMOT_3D/src/threadC_params.cpp",
+  "output": "CMakeFiles/raemot_3d.dir/src/threadC_params.cpp.o"
+},
+{
+  "directory": "/home/str-anu/Gen4/RAEMOT_3D/build-asan",
+  "command": "/usr/bin/c++  -I/home/str-anu/Gen4/RAEMOT_3D/../gen4/common -isystem /usr/include/opencv4 -isystem /usr/include/eigen3 -isystem /usr/include/libusb-1.0 -fsanitize=address -fno-omit-frame-pointer -g -g -std=gnu++17 -march=native -o CMakeFiles/raemot_3d.dir/src/threadC.cpp.o -c /home/str-anu/Gen4/RAEMOT_3D/src/threadC.cpp",
+  "file": "/home/str-anu/Gen4/RAEMOT_3D/src/threadC.cpp",
+  "output": "CMakeFiles/raemot_3d.dir/src/threadC.cpp.o"
+},
+{
+  "directory": "/home/str-anu/Gen4/RAEMOT_3D/build-asan",
+  "command": "/usr/bin/c++  -I/home/str-anu/Gen4/RAEMOT_3D/../gen4/common -isystem /usr/include/opencv4 -isystem /usr/include/eigen3 -isystem /usr/include/libusb-1.0 -fsanitize=address -fno-omit-frame-pointer -g -g -std=gnu++17 -march=native -o CMakeFiles/raemot_3d.dir/src/writer_queue.cpp.o -c /home/str-anu/Gen4/RAEMOT_3D/src/writer_queue.cpp",
+  "file": "/home/str-anu/Gen4/RAEMOT_3D/src/writer_queue.cpp",
+  "output": "CMakeFiles/raemot_3d.dir/src/writer_queue.cpp.o"
+}
+]

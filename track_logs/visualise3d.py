@@ -24,6 +24,7 @@ from datetime import datetime
 from zoneinfo import ZoneInfo
 import matplotlib
 matplotlib.use('Qt5Agg')
+#matplotlib.use('TkAgg')
 import matplotlib.pyplot as plt
 import matplotlib.cm as cm
 from matplotlib.colors import hsv_to_rgb

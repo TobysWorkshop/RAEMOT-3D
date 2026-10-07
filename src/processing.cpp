@@ -558,7 +558,8 @@ namespace processing {
                         RawState msg;
                         msg.cam_id = camera_id;
                         msg.track_id = static_cast<uint32_t>(trk->getID());
-                        msg.tg = tg;
+                        //msg.tg = tg; //REPLACE THIS BACK!!
+                        msg.tg = ts;
                         msg.x = state[0];
                         msg.y = state[1];
                         msg.vx = state[2];

@@ -23,6 +23,7 @@ std::atomic<bool> running{true};
 
 void handle_sigint(int) {
     running.store(false);
+    std::signal(SIGINT, SIG_DFL); //  a second ctr+C kills immediately via the OS
 }
 
 // Here is everything that one camera needs: its own queues, its own ProcessingPipeline
@@ -40,7 +41,7 @@ struct CameraContext {
     processing::ProcessingPipeline pipeline;
     std::promise<bool> setup_promise;
     std::thread worker;
-    //std::thread render_thread;
+    std::thread render_thread;
     std::unique_ptr<sepia::evk4::base_camera> camera_handle;
 
     CameraContext(CamId id, std::string cfg, sepia::usb::device_properties dev)
@@ -73,17 +74,17 @@ struct CameraContext {
         }
 
         // render thread
-        //render_thread = std::thread([this]() {
-        //    pipeline.render_setup();
-        //    frame_job job;
-        //    while (frames.pop(job)) {
-        //        if (pipeline.render_frame(job)) {
-        //            running.store(false);
-        //            break;
-        //        }
-        //    }
-        //    pipeline.render_teardown();
-        //});
+        render_thread = std::thread([this]() {
+            pipeline.render_setup();
+            frame_job job;
+            while (frames.pop(job)) {
+                if (pipeline.render_frame(job)) {
+                    running.store(false);
+                    break;
+                }
+            }
+            pipeline.render_teardown();
+        });
 
         // Physical camera wiring
         auto current_batch = std::make_shared<std::vector<sepia::dvs_event>>();
@@ -116,11 +117,28 @@ struct CameraContext {
             running.store(false);
         };
 
-        camera_handle = sepia::evk4::make_camera(
-            handle_event, handle_trigger_event, before_buffer, after_buffer, handle_exception,
-            sepia::evk4::default_parameters, device.serial, std::chrono::milliseconds(100),
-            128, 16384, [this]() { std::cerr << "[cam " << int(camera_id) << "] warning: packet dropped\n"; }
-        );
+        try {
+            camera_handle = sepia::evk4::make_camera(
+                std::move(handle_event), 
+                std::move(handle_trigger_event), 
+                std::move(before_buffer),
+                std::move(after_buffer),
+                std::move(handle_exception),
+                sepia::evk4::default_parameters, 
+                device.serial, 
+                std::chrono::milliseconds(100),
+                128, 
+                16384, 
+                [this]() { std::cerr << "[cam " << int(camera_id) << "] warning: packet dropped\n"; }
+            );
+        } catch (const std::exception& error) {
+            std::cerr << "[cam " << int(camera_id) << "] failed to open camera: " << error.what() << "\n";
+            events.stop();
+            worker.join();
+            frames.stop();
+            if (render_thread.joinable()) render_thread.join();
+            return false;
+        }
     
         return true;
     }
@@ -129,8 +147,8 @@ struct CameraContext {
         camera_handle.reset(); // stop the physical device first
         events.stop();
         if (worker.joinable()) worker.join();
-        //frames.stop();
-        //if (render_thread.joinable()) render_thread.join();
+        frames.stop();
+        if (render_thread.joinable()) render_thread.join();
     }
 
 };
@@ -241,19 +259,35 @@ int main(int argc, char* argv[]) {
     pin_thread_to_core(cam_b.worker, 2);
     pin_thread_to_core(threadC_thread, 3);
 
+    uint64_t dropped_cur_a = 0;
+    uint64_t dropped_cur_b = 0;
+    uint64_t dropped_cur_b = 0;
+
     while (running.load()) {
         std::this_thread::sleep_for(std::chrono::seconds(1));
+        if (cam_a.events.dropped_batches() > dropped_cur) {
+
+        }
         std::cout << "[Camera 0 (Camera A)] queue dropped " << cam_a.events.dropped_batches() << "/" << cam_a.events.pushed_batches() + cam_a.events.dropped_batches() << " batches\n";
         std::cout << "[Camera 1 (Camera B)] queue dropped " << cam_b.events.dropped_batches() << "/" << cam_b.events.pushed_batches() + cam_b.events.dropped_batches() << " batches\n";
         std::cout << "[Thread C] queue dropped " << threadC_queue.dropped_count() << " messages so far\n";
     }   
 
+    std::cerr << "[stereo_driver] shutting down camera A...\n";
     cam_a.shutdown();
-    cam_b.shutdown();
+    std::cerr << "[stereo_driver] camera A is down...\n";
 
+    std::cerr << "[stereo_driver] shutting down camera B...\n";
+    cam_b.shutdown();
+    std::cerr << "[stereo_driver] camera B is down...\n";
+
+    std::cerr << "[stereo_driver] shutting down thread C...\n";
     threadC_queue.stop();
     threadC_thread.join();
+    std::cerr << "[stereo_driver] thread C is down...\n";
 
+
+    std::cerr << "[stereo_driver] shutdown complete :)\n";
     return 0;
 
 }
