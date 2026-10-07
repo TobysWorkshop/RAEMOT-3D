@@ -2,6 +2,7 @@
 
 
 build/
+build-asan/
 
 .vscode/
 .DS_Store
