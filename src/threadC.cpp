@@ -5,6 +5,7 @@
 #include "track_update_queue.hpp"
 #include "threadC_params.h"
 #include "registry.hpp"
+#include "undistort_lut.hpp"
 
 // other includes
 #include <array>
@@ -21,6 +22,7 @@
 #include <string>
 #include <unistd.h>
 #include <eigen3/Eigen/Dense>
+#include <stdexcept>
 
 // custom matrix defs for simplicity
 using Mat3 = std::array<double, 9>; //row-major 3x3 (for fundamental F matrix)
@@ -81,6 +83,9 @@ namespace threadC {
         Mat3 F;
         Mat34 P_A;
         Mat34 P_B;
+        
+        // Undistort LUT
+        UndistortLUT lut_A, lut_B;
 
         // performance counters for final log on teardown
         uint64_t n_validated = 0;
@@ -309,6 +314,14 @@ namespace threadC {
         P_A = params.P_A;
         P_B = params.P_B;
 
+        // Build the undistort LUT
+        if (!lut_A.build(params.K_A, params.D_A, params.image_width, params.image_height) ||
+            !lut_B.build(params.K_B, params.D_B, params.image_width, params.image_height)) {
+            // if it fails:
+            std::cerr << "[Thread C] failed to build undistortion LUTs (check K/D/image_size in config)\n";
+            return false;
+        }
+
 
         // Start the writer! //
         if (params.save_file) {
@@ -341,12 +354,20 @@ namespace threadC {
     }
 
     // --- PROCESS TRACK UPDATE LOOP --- //
-    void process_track_update(const RawState& state) {
+    void process_track_update(const RawState& raw_state) {
         // Perform a full eval sweep if it's time to do so
-        if (state.tg - last_sweep_tg >= SWEEP_INTERVAL) {
-            last_sweep_tg = state.tg;
-            sweep(state.tg);
+        if (raw_state.tg - last_sweep_tg >= SWEEP_INTERVAL) {
+            last_sweep_tg = raw_state.tg;
+            sweep(raw_state.tg);
         }
+
+        // UNDISTORT //
+        // do this once, on arrival. Everything below only ever sees
+        // the undistorted pinhole pixels, positions and velocities
+        RawState state = raw_state;
+        const bool ok = (state.cam_id == CamId::A) ? lut_A.apply(state) : lut_B.apply(state);
+        if (!ok) return; // a strange off-sensor or non-invertible pixel, so drop the update
+        // ----
 
         // look up this camera_id and track_id combo in the registry
         uint16_t idx = reg.find(state.cam_id, state.track_id);
